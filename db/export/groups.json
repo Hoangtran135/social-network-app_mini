@@ -1,0 +1,170 @@
+[
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a38a"
+    },
+    "name": "Hội yêu Lập trình",
+    "description": "Chia sẻ kiến thức lập trình, học tập và tìm việc IT.",
+    "privacy": "public",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=group-Hội yêu Lập trình",
+    "coverImage": "https://picsum.photos/seed/group-cover-Hội yêu Lập trình/1200/400",
+    "creator": {
+      "$oid": "6aa8bc61296e60838758a37a"
+    },
+    "members": [
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37a"
+        },
+        "role": "admin",
+        "joinedAt": {
+          "$date": "2026-08-16T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a378"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-17T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37e"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-18T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37c"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-19T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a377"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-20T03:32:49.113Z"
+        }
+      }
+    ],
+    "rules": [],
+    "createdAt": {
+      "$date": "2026-07-17T03:32:49.113Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a38b"
+    },
+    "name": "Review Ẩm thực Việt",
+    "description": "Địa điểm ăn ngon, review quán mới mỗi ngày.",
+    "privacy": "public",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=group-Review Ẩm thực Việt",
+    "coverImage": "https://picsum.photos/seed/group-cover-Review Ẩm thực Việt/1200/400",
+    "creator": {
+      "$oid": "6aa8bc61296e60838758a37d"
+    },
+    "members": [
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37d"
+        },
+        "role": "admin",
+        "joinedAt": {
+          "$date": "2026-08-16T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37b"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-17T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a379"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-18T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a378"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-19T03:32:49.113Z"
+        }
+      }
+    ],
+    "rules": [],
+    "createdAt": {
+      "$date": "2026-07-17T03:32:49.113Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a38c"
+    },
+    "name": "Nhiếp ảnh & Du lịch",
+    "description": "Góc chia sẻ ảnh đẹp và kinh nghiệm du lịch.",
+    "privacy": "public",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=group-Nhiếp ảnh & Du lịch",
+    "coverImage": "https://picsum.photos/seed/group-cover-Nhiếp ảnh & Du lịch/1200/400",
+    "creator": {
+      "$oid": "6aa8bc61296e60838758a379"
+    },
+    "members": [
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a379"
+        },
+        "role": "admin",
+        "joinedAt": {
+          "$date": "2026-08-16T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a378"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-17T03:32:49.113Z"
+        }
+      },
+      {
+        "user": {
+          "$oid": "6aa8bc61296e60838758a37b"
+        },
+        "role": "member",
+        "joinedAt": {
+          "$date": "2026-08-18T03:32:49.113Z"
+        }
+      }
+    ],
+    "rules": [],
+    "createdAt": {
+      "$date": "2026-07-17T03:32:49.113Z"
+    },
+    "__v": 0
+  }
+]

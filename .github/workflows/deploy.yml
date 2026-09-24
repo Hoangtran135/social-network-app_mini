@@ -1,0 +1,22 @@
+name: Deploy to production
+
+# Runs whenever a PR is merged into master (a merge produces a push event on master).
+# Requires a self-hosted GitHub Actions runner installed on the Windows VPS — see
+# deploy/setup-github-runner.md for the one-time setup steps.
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows, vps]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false # keep .env, uploads/, node_modules/ between runs — they're gitignored, not part of the repo
+
+      # Same script as a manual deploy: stop app (release file locks) -> npm ci -> build -> pm2 restart -> health check
+      - name: Deploy
+        shell: powershell
+        run: .\deploy\deploy-windows.ps1 -SkipPull

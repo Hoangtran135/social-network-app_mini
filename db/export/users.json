@@ -1,0 +1,202 @@
+[
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a377"
+    },
+    "name": "Trần Xuân Hoàng",
+    "username": "xuanhoang",
+    "email": "xuanhoang@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=xuanhoang",
+    "coverImage": "https://picsum.photos/seed/cover-xuanhoang/1200/400",
+    "bio": "Quản trị viên hệ thống 👑",
+    "role": "admin",
+    "isBanned": false,
+    "workplace": "Social Network App",
+    "location": "Hà Nội",
+    "isOnline": true,
+    "lastActive": {
+      "$date": "2026-09-13T14:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-04-22T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a378"
+    },
+    "name": "Trần Quốc Bảo",
+    "username": "quocbao",
+    "email": "user1@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=quocbao",
+    "coverImage": "https://picsum.photos/seed/cover-quocbao/1200/400",
+    "bio": "Yêu công nghệ & du lịch 🌍",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "FPT Software",
+    "location": "Đà Nẵng",
+    "isOnline": true,
+    "lastActive": {
+      "$date": "2026-09-14T01:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-02-18T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a379"
+    },
+    "name": "Lê Thị Cẩm",
+    "username": "camle",
+    "email": "user2@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=camle",
+    "coverImage": "https://picsum.photos/seed/cover-camle/1200/400",
+    "bio": "Đam mê nhiếp ảnh 📸",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "Studio Cẩm",
+    "location": "TP. Hồ Chí Minh",
+    "isOnline": false,
+    "lastActive": {
+      "$date": "2026-09-13T07:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-05-13T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a37a"
+    },
+    "name": "Phạm Đức Duy",
+    "username": "ducduy",
+    "email": "user3@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=ducduy",
+    "coverImage": "https://picsum.photos/seed/cover-ducduy/1200/400",
+    "bio": "Sinh viên CNTT năm 4",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "Đại học Bách Khoa",
+    "location": "Hà Nội",
+    "isOnline": true,
+    "lastActive": {
+      "$date": "2026-09-13T18:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-05-03T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a37b"
+    },
+    "name": "Hoàng Thu Hà",
+    "username": "thuha",
+    "email": "user4@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=thuha",
+    "coverImage": "https://picsum.photos/seed/cover-thuha/1200/400",
+    "bio": "Thích đọc sách và cà phê ☕",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "NXB Trẻ",
+    "location": "TP. Hồ Chí Minh",
+    "isOnline": false,
+    "lastActive": {
+      "$date": "2026-09-13T22:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2025-12-28T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a37c"
+    },
+    "name": "Vũ Anh Khoa",
+    "username": "anhkhoa",
+    "email": "user5@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=anhkhoa",
+    "coverImage": "https://picsum.photos/seed/cover-anhkhoa/1200/400",
+    "bio": "Streamer / Gamer 🎮",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "Freelancer",
+    "location": "Cần Thơ",
+    "isOnline": false,
+    "lastActive": {
+      "$date": "2026-09-14T12:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2025-12-21T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a37d"
+    },
+    "name": "Đặng Ngọc Linh",
+    "username": "ngoclinh",
+    "email": "user6@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=ngoclinh",
+    "coverImage": "https://picsum.photos/seed/cover-ngoclinh/1200/400",
+    "bio": "Yêu ẩm thực, review đồ ăn 🍜",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "FoodTour VN",
+    "location": "Đà Nẵng",
+    "isOnline": false,
+    "lastActive": {
+      "$date": "2026-09-14T14:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-01-07T03:32:49.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6aa8bc61296e60838758a37e"
+    },
+    "name": "Bùi Gia Phúc",
+    "username": "giaphuc",
+    "email": "user7@demo.vn",
+    "passwordHash": "$2b$10$QdE4jHBmGZYDd7KSjvhMOOZuN/IRBYkAXNtdpKKg/EhQ96PoQWhti",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=giaphuc",
+    "coverImage": "https://picsum.photos/seed/cover-giaphuc/1200/400",
+    "bio": "Kỹ sư phần mềm",
+    "role": "user",
+    "isBanned": false,
+    "workplace": "Viettel",
+    "location": "Hà Nội",
+    "isOnline": true,
+    "lastActive": {
+      "$date": "2026-09-15T00:32:49.080Z"
+    },
+    "blockedUsers": [],
+    "joinDate": {
+      "$date": "2026-03-06T03:32:49.080Z"
+    },
+    "__v": 0
+  }
+]
