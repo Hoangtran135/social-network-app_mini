@@ -8,7 +8,7 @@ export interface ChatWindow {
   minimized: boolean;
 }
 
-const MAX_WINDOWS = 3;
+const MAX_WINDOWS = 4;
 
 function useChatWindowsState() {
   const [windows, setWindows] = useState<ChatWindow[]>([]);
