@@ -10,6 +10,11 @@
 
 param([switch]$SkipPull)
 
+# PM2 / npm in cảnh báo ra stderr (vd "app doesn't exist"); ở chế độ "Stop" (kế thừa khi được gọi từ
+# setup-vps-windows.ps1) PowerShell coi đó là lỗi và dừng script → luôn dùng "Continue", tự kiểm tra
+# $LASTEXITCODE bằng FailIfError.
+$ErrorActionPreference = "Continue"
+
 Set-Location (Join-Path $PSScriptRoot "..")
 
 # Same PM2 process list for every account (set machine-wide by setup-vps-windows.ps1)
