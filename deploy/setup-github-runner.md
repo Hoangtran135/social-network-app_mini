@@ -1,4 +1,4 @@
-# Cài đặt tự động deploy khi merge PR vào master
+# Cài đặt tự động deploy khi merge PR vào main
 
 Việc này cần chạy **trên chính VPS** (103.16.224.147), không phải máy dev. Làm theo các bước sau qua RDP.
 
@@ -14,7 +14,7 @@ Việc này cần chạy **trên chính VPS** (103.16.224.147), không phải m�
 mkdir C:\actions-runner; cd C:\actions-runner
 Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/vX.X.X/actions-runner-win-x64-X.X.X.zip -OutFile actions-runner.zip
 Expand-Archive -Path actions-runner.zip -DestinationPath .
-./config.cmd --url https://github.com/Hoangtran135/social-network-appp --token <TOKEN_GITHUB_CUNG_CAP>
+./config.cmd --url https://github.com/Hoangtran135/social-network-app_mini --token <TOKEN_GITHUB_CUNG_CAP>
 ```
 
 4. Khi `config.cmd` hỏi **"Enter any additional labels"**, nhập chính xác: `windows,vps`
@@ -35,12 +35,12 @@ Kiểm tra chạy đúng: `Get-Service actions.runner.*` phải ở trạng thá
 
 ## 3. Chuẩn bị thư mục checkout của runner (chỉ làm 1 lần)
 
-Runner sẽ tự checkout code vào `C:\actions-runner\_work\social-network-app\social-network-app` mỗi lần chạy — đây sẽ là bản chạy chính thức mới, **khác** với thư mục bạn từng deploy thủ công trước đó.
+Runner sẽ tự checkout code vào `C:\actions-runner\_work\social-network-app_mini\social-network-app_mini` mỗi lần chạy — đây sẽ là bản chạy chính thức mới, **khác** với thư mục bạn từng deploy thủ công trước đó.
 
 Sau lần chạy workflow đầu tiên (hoặc trước khi trigger nó), copy file `.env` thật (với `JWT_SECRET`, `MONGODB_URI`, v.v. — dùng luôn file `.env` mà `setup-vps-windows.ps1` đã tạo trong thư mục project, **giữ nguyên `JWT_SECRET`** để người dùng không bị đăng xuất) vào đúng thư mục checkout đó:
 
 ```powershell
-Copy-Item "C:\đường-dẫn-.env-cũ-của-bạn\.env" "C:\actions-runner\_work\social-network-app\social-network-app\.env"
+Copy-Item "C:\đường-dẫn-.env-cũ-của-bạn\.env" "C:\actions-runner\_work\social-network-app_mini\social-network-app_mini\.env"
 ```
 
 Workflow đã đặt `clean: false` nên `.env` sẽ **không** bị xóa giữa các lần deploy sau này.
@@ -57,8 +57,8 @@ pm2 delete social-network-app
 
 ## 5. Test thử
 
-Tạo 1 PR nhỏ (vd sửa README), merge vào `master`, rồi vào tab **Actions** trên GitHub xem workflow **Deploy to production** có chạy xanh không. Nếu lỗi, log chi tiết hiện ngay trong đó.
+Tạo 1 PR nhỏ (vd sửa README), merge vào `main`, rồi vào tab **Actions** trên GitHub xem workflow **Deploy to production** có chạy xanh không. Nếu lỗi, log chi tiết hiện ngay trong đó.
 
 ---
 
-Sau khi hoàn tất 5 bước trên, mọi PR merge vào `master` sẽ tự động: `npm ci` → `npm run build` → `pm2 restart` trên VPS — không cần làm gì thủ công nữa.
+Sau khi hoàn tất 5 bước trên, mọi PR merge vào `main` sẽ tự động: `npm ci` → `npm run build` → `pm2 restart` trên VPS — không cần làm gì thủ công nữa.

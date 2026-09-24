@@ -2,7 +2,7 @@
 
 Website mạng xã hội full-stack: đăng bài, kết bạn, nhắn tin realtime, gọi video/thoại, story, nhóm, thông báo và trang quản trị.
 
-Repo: https://github.com/Hoangtran135/social-network-appp.git
+Repo: https://github.com/Hoangtran135/social-network-app_mini.git
 
 ## Công nghệ sử dụng
 
@@ -20,8 +20,8 @@ Repo: https://github.com/Hoangtran135/social-network-appp.git
 
 1. Clone repo:
    ```bash
-   git clone https://github.com/Hoangtran135/social-network-appp.git
-   cd social-network-appp
+   git clone https://github.com/Hoangtran135/social-network-app_mini.git
+   cd social-network-app_mini
    ```
 
 2. Cài dependencies:
@@ -78,8 +78,8 @@ Toàn bộ script nằm trong thư mục `deploy/`. Mọi lệnh chạy trong **
 
 2. Lấy code về VPS:
    ```powershell
-   git clone https://github.com/Hoangtran135/social-network-appp.git C:\www\social-network-app
-   cd C:\www\social-network-app
+   git clone https://github.com/Hoangtran135/social-network-app_mini.git C:\www\social-network-app-mini
+   cd C:\www\social-network-app-mini
    ```
 
 3. Cài đặt một lần — MongoDB, PM2, Nginx, tường lửa, file `.env` production (JWT_SECRET ngẫu nhiên), tự khởi động lại khi reboot, build và chạy app:
@@ -101,7 +101,7 @@ Toàn bộ script nằm trong thư mục `deploy/`. Mọi lệnh chạy trong **
 7. (Tuỳ chọn) Muốn gửi email "Quên mật khẩu" thật thì điền các biến `SMTP_*` trong `.env` rồi chạy lại bước deploy.
 
 **Các lần cập nhật sau:** `.\deploy\deploy-windows.ps1` (tự `git pull` → cài thư viện → build → khởi động lại → kiểm tra `/api/health`).
-Hoặc tự động mỗi khi merge vào `master`: xem [deploy/setup-github-runner.md](deploy/setup-github-runner.md).
+Hoặc tự động mỗi khi merge vào `main`: xem [deploy/setup-github-runner.md](deploy/setup-github-runner.md).
 
 **Lệnh hay dùng:** `pm2 status` · `pm2 logs social-network-app` · `pm2 restart social-network-app`
 

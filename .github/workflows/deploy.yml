@@ -1,11 +1,11 @@
 name: Deploy to production
 
-# Runs whenever a PR is merged into master (a merge produces a push event on master).
+# Runs whenever a PR is merged into main (a merge produces a push event on main).
 # Requires a self-hosted GitHub Actions runner installed on the Windows VPS — see
 # deploy/setup-github-runner.md for the one-time setup steps.
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
   deploy:
