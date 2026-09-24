@@ -22,7 +22,7 @@ export const LeftSidebar: React.FC = () => {
     { label: 'Ảnh của tôi', path: `${myProfile}?tab=photos`, icon: ImageIcon },
     { label: 'Đã lưu', path: '/saved', icon: Bookmark },
     { label: 'Cài đặt tài khoản', path: '/settings', icon: Settings },
-    { label: 'Thoát', path: '/logout', icon: Settings },
+    
   ];
 
   return (
