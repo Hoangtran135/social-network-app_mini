@@ -13,7 +13,7 @@ import { isBlockedBetween, getBlockedIds } from '../privacyRules';
 export const usersRouter = Router();
 usersRouter.use(requireAuth);
 
-/** GET /api/users?q=...&online=true — tìm theo tên / username / email, ẩn người có quan hệ chặn. */
+/** Tìm kiếm người dùng */
 usersRouter.get('/', async (req, res) => {
   const filter: Record<string, unknown> = {};
   const q = String(req.query.q || '').trim();
@@ -34,13 +34,13 @@ usersRouter.get('/', async (req, res) => {
   res.json({ users: users.map(userToJson), total });
 });
 
-/** GET /api/users/me/blocked — danh sách người mình đã chặn. */
+/** Lấy danh sách người đã chặn */
 usersRouter.get('/me/blocked', async (req, res) => {
   const me = await UserModel.findById(req.userId).populate('blockedUsers');
   res.json({ users: (me?.blockedUsers || []).map(userToJson) });
 });
 
-/** GET /api/users/:id — hồ sơ một người; đang chặn nhau thì coi như không tồn tại. */
+/** Xem hồ sơ người dùng */
 usersRouter.get('/:id', async (req, res) => {
   const user = await UserModel.findById(req.params.id);
   if (!user || (await isBlockedBetween(req.userId, req.params.id))) {
@@ -49,13 +49,13 @@ usersRouter.get('/:id', async (req, res) => {
   res.json({ user: userToJson(user) });
 });
 
-/** PATCH /api/users/me — sửa hồ sơ (validate đã lọc bỏ các trường không được phép sửa). */
+/** Sửa hồ sơ */
 usersRouter.patch('/me', validate(updateProfileSchema), async (req, res) => {
   const user = await UserModel.findByIdAndUpdate(req.userId, req.body, { new: true });
   res.json({ user: meToJson(user) });
 });
 
-/** PATCH /api/users/me/password — phải nhập đúng mật khẩu hiện tại mới được đổi. */
+/** Đổi mật khẩu */
 usersRouter.patch('/me/password', validate(changePasswordSchema), async (req, res) => {
   const user = await UserModel.findById(req.userId);
   if (!user || !(await bcrypt.compare(req.body.currentPassword, user.passwordHash))) {
@@ -66,7 +66,7 @@ usersRouter.patch('/me/password', validate(changePasswordSchema), async (req, re
   res.json({ ok: true });
 });
 
-/** POST /api/users/:id/block — chặn một người, đồng thời huỷ kết bạn và xoá lời mời giữa hai người. */
+/** Chặn người dùng */
 usersRouter.post('/:id/block', async (req, res) => {
   const me = req.userId;
   const target = req.params.id;
@@ -80,7 +80,7 @@ usersRouter.post('/:id/block', async (req, res) => {
   res.json({ user: meToJson(user) });
 });
 
-/** DELETE /api/users/:id/block — bỏ chặn (không tự khôi phục quan hệ bạn bè). */
+/** Bỏ chặn người dùng */
 usersRouter.delete('/:id/block', async (req, res) => {
   const user = await UserModel.findByIdAndUpdate(req.userId, { $pull: { blockedUsers: req.params.id } }, { new: true });
   res.json({ user: meToJson(user) });

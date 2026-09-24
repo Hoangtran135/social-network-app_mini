@@ -16,7 +16,7 @@ commentsRouter.use(requireAuth);
 
 const canViewPost = (post: Doc, userId: string) => canView(post.author.toString(), userId, post.privacy);
 
-/** GET /api/comments?postId=... — bình luận của một bài; không có postId thì lấy của mọi bài mình được xem. */
+/** Lấy danh sách bình luận */
 commentsRouter.get('/', async (req, res) => {
   const { postId } = req.query;
   if (typeof postId === 'string') {
@@ -35,10 +35,7 @@ commentsRouter.get('/', async (req, res) => {
   res.json({ comments: comments.map(commentToJson) });
 });
 
-/**
- * POST /api/comments — thêm bình luận (có parentId = trả lời một bình luận khác).
- * Báo cho tác giả bài viết và những người được gắn thẻ, đồng thời đẩy bình luận mới tới họ qua realtime.
- */
+/** Thêm bình luận / trả lời bình luận */
 commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   const { postId, content, image, parentId, taggedUserIds = [] } = req.body;
   const me = req.userId;
@@ -66,7 +63,7 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   res.json({ comment: json });
 });
 
-/** DELETE /api/comments/:id — người viết bình luận hoặc chủ bài viết được xoá. */
+/** Xoá bình luận */
 commentsRouter.delete('/:id', async (req, res) => {
   const comment = await CommentModel.findById(req.params.id);
   if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });
@@ -88,7 +85,7 @@ commentsRouter.delete('/:id', async (req, res) => {
   if (post) emitToAllowedViewers(post.privacy, post.author.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, req.userId);
 });
 
-/** POST /api/comments/:id/like — thích / bỏ thích (đã thích thì gỡ ra, chưa thích thì thêm vào). */
+/** Thích / bỏ thích bình luận */
 commentsRouter.post('/:id/like', async (req, res) => {
   const comment = await CommentModel.findById(req.params.id);
   if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });

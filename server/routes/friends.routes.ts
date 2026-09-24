@@ -14,29 +14,29 @@ import { isBlockedBetween, getBlockedIds, getFriendIds } from '../privacyRules';
 export const friendsRouter = Router();
 friendsRouter.use(requireAuth);
 
-/** Danh sách bạn bè (dạng JSON) của một người. */
+/** Lấy danh sách bạn bè của một người */
 async function getFriendList(userId: string) {
   const friendships = await FriendshipModel.find({ $or: [{ userA: userId }, { userB: userId }] }).populate(['userA', 'userB']);
   return friendships.map((f: Doc) => userToJson(f.userA.id === userId ? f.userB : f.userA));
 }
 
-/** Tìm lời mời mà người dùng có liên quan (role = 'sender' hoặc 'receiver'); không đúng người thì trả null. */
+/** Tìm lời mời kết bạn liên quan tới người dùng */
 async function findRequestOfUser(id: string, userId: string, role: 'sender' | 'receiver') {
   const request = await FriendRequestModel.findById(id);
   return request && request[role].toString() === userId ? request : null;
 }
 
-/** GET /api/friends — bạn bè của mình. */
+/** Lấy danh sách bạn bè của mình */
 friendsRouter.get('/', async (req, res) => {
   res.json({ friends: await getFriendList(req.userId) });
 });
 
-/** GET /api/friends/of/:userId — bạn bè của một người bất kỳ. */
+/** Lấy danh sách bạn bè của người khác */
 friendsRouter.get('/of/:userId', async (req, res) => {
   res.json({ friends: await getFriendList(req.params.userId) });
 });
 
-/** GET /api/friends/suggestions — gợi ý: bỏ chính mình, bạn bè, người bị chặn và những người đang có lời mời qua lại. */
+/** Gợi ý kết bạn */
 friendsRouter.get('/suggestions', async (req, res) => {
   const me = req.userId;
   const [friendIds, blockedIds, pending] = await Promise.all([
@@ -52,19 +52,19 @@ friendsRouter.get('/suggestions', async (req, res) => {
   res.json({ users: users.map(userToJson) });
 });
 
-/** GET /api/friends/requests — lời mời gửi đến mình. */
+/** Lấy lời mời kết bạn đã nhận */
 friendsRouter.get('/requests', async (req, res) => {
   const requests = await FriendRequestModel.find({ receiver: req.userId }).populate('sender');
   res.json({ requests: requests.map((r: Doc) => friendRequestToJson(r)) });
 });
 
-/** GET /api/friends/requests/sent — lời mời mình đã gửi. */
+/** Lấy lời mời kết bạn đã gửi */
 friendsRouter.get('/requests/sent', async (req, res) => {
   const requests = await FriendRequestModel.find({ sender: req.userId }).populate(['sender', 'receiver']);
   res.json({ requests: requests.map((r: Doc) => friendRequestToJson(r)) });
 });
 
-/** POST /api/friends/requests — gửi lời mời và báo cho người nhận. */
+/** Gửi lời mời kết bạn */
 friendsRouter.post('/requests', validate(sendFriendRequestSchema), async (req, res) => {
   const me = req.userId;
   const { targetUserId } = req.body;
@@ -78,7 +78,7 @@ friendsRouter.post('/requests', validate(sendFriendRequestSchema), async (req, r
   res.json({ request: friendRequestToJson(request) });
 });
 
-/** POST /api/friends/requests/:id/accept — tạo quan hệ bạn bè, xoá lời mời, báo cho người gửi. */
+/** Chấp nhận lời mời kết bạn */
 friendsRouter.post('/requests/:id/accept', async (req, res) => {
   const request = await findRequestOfUser(req.params.id, req.userId, 'receiver');
   if (!request) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
@@ -90,7 +90,7 @@ friendsRouter.post('/requests/:id/accept', async (req, res) => {
   res.json({ ok: true });
 });
 
-/** POST /api/friends/requests/:id/reject — người nhận từ chối (chỉ báo realtime, không tạo thông báo). */
+/** Từ chối lời mời kết bạn */
 friendsRouter.post('/requests/:id/reject', async (req, res) => {
   const request = await findRequestOfUser(req.params.id, req.userId, 'receiver');
   if (!request) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
@@ -99,7 +99,7 @@ friendsRouter.post('/requests/:id/reject', async (req, res) => {
   emitToUser(request.sender.toString(), 'friend-request:rejected', { requestId: request.id });
 });
 
-/** DELETE /api/friends/requests/:id — người gửi huỷ lời mời của mình. */
+/** Huỷ lời mời kết bạn đã gửi */
 friendsRouter.delete('/requests/:id', async (req, res) => {
   const request = await findRequestOfUser(req.params.id, req.userId, 'sender');
   if (!request) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
@@ -108,7 +108,7 @@ friendsRouter.delete('/requests/:id', async (req, res) => {
   emitToUser(request.receiver.toString(), 'friend-request:cancelled', { requestId: request.id });
 });
 
-/** DELETE /api/friends/:userId — huỷ kết bạn (mình có thể là A hoặc B trong quan hệ). */
+/** Huỷ kết bạn */
 friendsRouter.delete('/:userId', async (req, res) => {
   const me = req.userId;
   const other = req.params.userId;

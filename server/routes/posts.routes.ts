@@ -15,17 +15,17 @@ postsRouter.use(requireAuth);
 // Các trường cần "populate" (thay id bằng thông tin đầy đủ) mỗi khi trả bài viết về client
 const POPULATE = ['author', 'wallOwner', 'reactions.userId', 'savedBy', 'taggedUsers'];
 
-/** Gửi bài viết (mới hoặc vừa cập nhật) tới những người được xem. */
+/** Gửi bài viết realtime tới người được xem */
 const emitPostToViewers = (post: Doc, event: 'post:new' | 'post:update') =>
   emitToAllowedViewers(post.privacy, getId(post.author), event, { post: postToJson(post) });
 
-/** Lấy bài viết theo id rồi kiểm tra quyền xem; trả null nếu không có hoặc không được xem. */
+/** Lấy bài viết nếu được xem */
 async function findPostIfVisible(id: string, userId: string) {
   const post = await PostModel.findById(id).populate(POPULATE);
   return post && (await canView(getId(post.author), userId, post.privacy)) ? post : null;
 }
 
-/** GET /api/posts?limit=&skip= — bảng tin, mới nhất trước, bỏ bài không được xem. */
+/** Lấy bảng tin */
 postsRouter.get('/', async (req, res) => {
   const posts = await PostModel.find()
     .sort({ createdAt: -1 })
@@ -37,10 +37,7 @@ postsRouter.get('/', async (req, res) => {
   res.json({ posts: visible.map((p: Doc) => postToJson(p, req.userId)) });
 });
 
-/**
- * GET /api/posts/memories — Kỷ niệm: bài của mình đăng đúng ngày + tháng hôm nay ở các năm trước.
- * (Phải khai báo TRƯỚC '/:id', nếu không Express hiểu "memories" là một id.)
- */
+/** Lấy kỷ niệm (phải đặt trước '/:id') */
 postsRouter.get('/memories', async (req, res) => {
   const now = new Date();
   const posts = await PostModel.find({ author: req.userId, createdAt: { $lt: new Date(now.getFullYear(), 0, 1) } })
@@ -50,14 +47,14 @@ postsRouter.get('/memories', async (req, res) => {
   res.json({ posts: memories.map((p: Doc) => postToJson(p, req.userId)) });
 });
 
-/** GET /api/posts/:id */
+/** Lấy chi tiết bài viết */
 postsRouter.get('/:id', async (req, res) => {
   const post = await findPostIfVisible(req.params.id, req.userId);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   res.json({ post: postToJson(post, req.userId) });
 });
 
-/** POST /api/posts — đăng bài (có thể lên tường người khác, có thể gắn thẻ bạn bè → gửi thông báo cho họ). */
+/** Đăng bài viết */
 postsRouter.post('/', validate(createPostSchema), async (req, res) => {
   const { wallOwnerId, taggedUserIds = [], ...fields } = req.body;
   const me = req.userId;
@@ -75,7 +72,7 @@ postsRouter.post('/', validate(createPostSchema), async (req, res) => {
   emitPostToViewers(post, 'post:new');
 });
 
-/** PATCH /api/posts/:id — sửa bài của mình (chỉ các trường có gửi lên). */
+/** Sửa bài viết */
 postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
   const post = await PostModel.findById(req.params.id);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
@@ -88,7 +85,7 @@ postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
   emitPostToViewers(post, 'post:update'); 
 });
 
-/** DELETE /api/posts/:id — chỉ tác giả được xoá. */
+/** Xoá bài viết */
 postsRouter.delete('/:id', async (req, res) => {
   const post = await PostModel.findById(req.params.id);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
@@ -99,10 +96,7 @@ postsRouter.delete('/:id', async (req, res) => {
   emitToAllowedViewers(post.privacy, req.userId, 'post:delete', { postId: post.id });
 });
 
-/**
- * POST /api/posts/:id/react — thả cảm xúc. Bấm lại đúng loại đang có = bỏ; loại khác = đổi; chưa có = thêm.
- * Mỗi bước dùng findOneAndUpdate có điều kiện để an toàn khi nhiều người bấm cùng lúc.
- */
+/** Thả / đổi / bỏ cảm xúc bài viết */
   postsRouter.post('/:id/react', validate(reactPostSchema), async (req, res) => {
     const { type } = req.body;
     const me = req.userId;
@@ -128,7 +122,7 @@ postsRouter.delete('/:id', async (req, res) => {
     emitPostToViewers(fresh, 'post:update');
   });
 
-/** POST /api/posts/:id/pin — ghim / bỏ ghim bài của mình lên đầu trang cá nhân. */
+/** Ghim / bỏ ghim bài viết */
 postsRouter.post('/:id/pin', async (req, res) => {
   const post = await PostModel.findById(req.params.id).populate(POPULATE);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
@@ -140,7 +134,7 @@ postsRouter.post('/:id/pin', async (req, res) => {
   emitPostToViewers(post, 'post:update');
 });
 
-/** POST /api/posts/:id/save — lưu / bỏ lưu (riêng tư, không cần báo realtime cho ai). */
+/** Lưu / bỏ lưu bài viết */
 postsRouter.post('/:id/save', async (req, res) => {
   const post = await findPostIfVisible(req.params.id, req.userId);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
@@ -151,7 +145,7 @@ postsRouter.post('/:id/save', async (req, res) => {
   res.json({ post: postToJson(fresh, req.userId) });
 });
 
-/** POST /api/posts/:id/share — tạo bài mới trên tường mình, sao chép nội dung + ảnh của bài gốc. */
+/** Chia sẻ bài viết */
 postsRouter.post('/:id/share', validate(sharePostSchema), async (req, res) => {
   const original = await findPostIfVisible(req.params.id, req.userId);
   if (!original) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });

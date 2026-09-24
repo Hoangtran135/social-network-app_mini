@@ -12,7 +12,7 @@ storiesRouter.use(requireAuth);
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** GET /api/stories — story chưa hết hạn mà mình được xem. */
+/** Lấy danh sách story */
 storiesRouter.get('/', async (req, res) => {
   const stories = await StoryModel.find({ expiresAt: { $gt: new Date() } })
     .sort({ createdAt: -1 })
@@ -22,7 +22,7 @@ storiesRouter.get('/', async (req, res) => {
   res.json({ stories: visible.map(storyToJson) });
 });
 
-/** POST /api/stories */
+/** Đăng story */
 storiesRouter.post('/', validate(createStorySchema), async (req, res) => {
   const story = await StoryModel.create({ ...req.body, user: req.userId, expiresAt: new Date(Date.now() + DAY) });
   await story.populate('user');
@@ -31,7 +31,7 @@ storiesRouter.post('/', validate(createStorySchema), async (req, res) => {
   emitToAllowedViewers(story.privacy, req.userId, 'story:new', { story: json });
 });
 
-/** DELETE /api/stories/:id — chỉ người đăng được xoá. */
+/** Xoá story */
 storiesRouter.delete('/:id', async (req, res) => {
   const story = await StoryModel.findById(req.params.id);
   if (!story) return res.status(404).json({ error: 'Không tìm thấy story.' });
@@ -41,7 +41,7 @@ storiesRouter.delete('/:id', async (req, res) => {
   emitToAllowedViewers(story.privacy, req.userId, 'story:delete', { storyId: story.id });
 });
 
-/** POST /api/stories/:id/view — thêm mình vào danh sách người đã xem (chỉ thêm 1 lần). */
+/** Đánh dấu đã xem story */
 storiesRouter.post('/:id/view', async (req, res) => {
   const story = await StoryModel.findById(req.params.id);
   const { friendIds, blockedIds } = await getFriendAndBlockedIds(req.userId);

@@ -9,7 +9,7 @@ import { notificationToJson } from '../formatResponse';
 export const notificationsRouter = Router();
 notificationsRouter.use(requireAuth);
 
-/** GET /api/notifications?limit=&skip= — mới nhất trước. */
+/** Lấy danh sách thông báo */
 notificationsRouter.get('/', async (req, res) => {
   const notifications = await NotificationModel.find({ user: req.userId })
     .sort({ createdAt: -1 })
@@ -19,13 +19,13 @@ notificationsRouter.get('/', async (req, res) => {
   res.json({ notifications: notifications.map(notificationToJson) });
 });
 
-/** PATCH /api/notifications/read-all */
+/** Đánh dấu đã đọc tất cả thông báo */
 notificationsRouter.patch('/read-all', async (req, res) => {
   await NotificationModel.updateMany({ user: req.userId }, { isRead: true });
   res.json({ ok: true });
 });
 
-/** PATCH /api/notifications/:id/read — điều kiện có user để không ai đánh dấu được thông báo của người khác. */
+/** Đánh dấu đã đọc một thông báo */
 notificationsRouter.patch('/:id/read', async (req, res) => {
   await NotificationModel.updateOne({ _id: req.params.id, user: req.userId }, { isRead: true });
   res.json({ ok: true });

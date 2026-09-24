@@ -25,21 +25,21 @@ messagesRouter.use(requireAuth);
 
 const getMemberIds = (conv: Doc): string[] => conv.participants.map(String);
 
-/** Gửi tin nhắn tới các thành viên qua realtime (trừ exceptUserId nếu có). */
+/** Gửi tin nhắn realtime tới các thành viên */
 function broadcastMessage(conv: Doc, message: unknown, exceptUserId?: string) {
   getMemberIds(conv)
     .filter((id) => id !== exceptUserId)
     .forEach((id) => emitToUser(id, 'message:new', { conversationId: conv.id, message }));
 }
 
-/** Tin nhắn hệ thống (vd "A đã đổi biệt danh..."), không có người gửi. */
+/** Tạo tin nhắn hệ thống */
 async function createSystemMessage(conversationId: string, content: string) {
   const message = await MessageModel.create({ conversation: conversationId, kind: 'system', content });
   await ConversationModel.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
   return message;
 }
 
-/** Middleware: người dùng phải là thành viên của hội thoại :id. Hợp lệ thì gắn hội thoại vào res.locals.conv. */
+/** Middleware: kiểm tra là thành viên hội thoại */
 async function requireMember(req: Request, res: Response, next: NextFunction) {
   const conv = await ConversationModel.findById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Không tìm thấy cuộc trò chuyện.' });
@@ -48,7 +48,7 @@ async function requireMember(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-/** Middleware: chat 1-1 mà hai bên đang chặn nhau thì không cho gửi tin (nhóm chat bỏ qua). */
+/** Middleware: chặn gửi tin khi hai bên chặn nhau */
 async function requireNotBlocked(req: Request, res: Response, next: NextFunction) {
   const conv = res.locals.conv;
   const otherId = getMemberIds(conv).find((id) => id !== req.userId);
@@ -56,7 +56,7 @@ async function requireNotBlocked(req: Request, res: Response, next: NextFunction
   next();
 }
 
-/** Tạo tin nhắn của người dùng, đẩy hội thoại lên đầu danh sách và gửi realtime cho các thành viên khác. */
+/** Tạo và gửi tin nhắn */
 async function createAndBroadcastMessage(req: Request, res: Response, data: Record<string, unknown>) {
   const conv = res.locals.conv;
   const message = await MessageModel.create({ conversation: conv._id, sender: req.userId, readBy: [req.userId], ...data });
@@ -67,10 +67,10 @@ async function createAndBroadcastMessage(req: Request, res: Response, data: Reco
   res.json({ message: json });
 }
 
-/** Tìm tin nhắn :messageId trong đúng hội thoại :id. */
+/** Tìm tin nhắn trong hội thoại */
 const findMessage = (req: Request) => MessageModel.findOne({ _id: req.params.messageId, conversation: req.params.id });
 
-/** Lưu tin nhắn vừa sửa (thu hồi / cảm xúc) rồi gửi bản mới cho TẤT CẢ thành viên (để các tab khác cũng cập nhật). */
+/** Lưu tin nhắn đã sửa và gửi realtime */
 async function saveMessageAndBroadcast(res: Response, message: Doc) {
   await message.save();
   await message.populate('sender');
@@ -79,7 +79,7 @@ async function saveMessageAndBroadcast(res: Response, message: Doc) {
   res.json({ message: json });
 }
 
-/** GET /api/messages/conversations — hội thoại của mình, kèm tin nhắn cuối và số tin chưa đọc. */
+/** Lấy danh sách hội thoại */
 messagesRouter.get('/conversations', async (req, res) => {
   const conversations = await ConversationModel.find({ participants: req.userId }).sort({ updatedAt: -1 }).populate('participants');
   const result = await Promise.all(
@@ -94,7 +94,7 @@ messagesRouter.get('/conversations', async (req, res) => {
   res.json({ conversations: result });
 });
 
-/** POST /api/messages/conversations — từ 3 người trở lên tạo nhóm (bắt buộc có tên); 2 người thì lấy chat 1-1 cũ hoặc tạo mới. */
+/** Tạo hội thoại 1-1 hoặc nhóm */
 messagesRouter.post('/conversations', validate(createConversationSchema), async (req, res) => {
   const { participantId, participantIds, name } = req.body;
   const ids: string[] = [...new Set<string>([...(participantIds || [participantId]), req.userId])].filter(Boolean);
@@ -123,7 +123,7 @@ messagesRouter.post('/conversations', validate(createConversationSchema), async 
   res.json({ conversation: conversationToJson(conv) });
 });
 
-/** PATCH /api/messages/conversations/:id/nickname — đặt biệt danh (chuỗi rỗng = xoá) và thêm tin nhắn hệ thống. */
+/** Đặt biệt danh */
 messagesRouter.patch('/conversations/:id/nickname', validate(setNicknameSchema), requireMember, async (req, res) => {
   const { userId, nickname } = req.body;
   const conv = res.locals.conv;
@@ -141,7 +141,7 @@ messagesRouter.patch('/conversations/:id/nickname', validate(setNicknameSchema),
   res.json({ conversation: conversationToJson(conv), systemMessage: messageToJson(systemMessage) });
 });
 
-/** GET /api/messages/conversations/:id/messages — tin nhắn cũ nhất trước; mở hội thoại = đánh dấu đã đọc. */
+/** Lấy tin nhắn của hội thoại */
 messagesRouter.get('/conversations/:id/messages', requireMember, async (req, res) => {
   const messages = await MessageModel.find({ conversation: req.params.id }).sort({ createdAt: 1 }).limit(500).populate('sender');
   await MessageModel.updateMany({ conversation: req.params.id, sender: { $ne: req.userId } }, { $addToSet: { readBy: req.userId } });
@@ -149,18 +149,18 @@ messagesRouter.get('/conversations/:id/messages', requireMember, async (req, res
   res.json({ messages: messages.map((m: Doc) => messageToJson(m, ids)) });
 });
 
-/** POST /api/messages/conversations/:id/messages — gửi tin nhắn chữ và / hoặc tệp đính kèm. */
+/** Gửi tin nhắn */
 messagesRouter.post('/conversations/:id/messages', validate(sendMessageSchema), requireMember, requireNotBlocked, (req, res) =>
   createAndBroadcastMessage(req, res, { content: req.body.content, attachments: req.body.attachments })
 );
 
-/** POST /api/messages/conversations/:id/share-post — gửi một bài viết vào chat (client hiển thị bài theo sharedPostId). */
+/** Chia sẻ bài viết vào chat */
 messagesRouter.post('/conversations/:id/share-post', validate(sharePostToChatSchema), requireMember, requireNotBlocked, async (req, res) => {
   if (!(await PostModel.exists({ _id: req.body.postId }))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   await createAndBroadcastMessage(req, res, { content: req.body.message || '', sharedPostId: req.body.postId });
 });
 
-/** DELETE /api/messages/conversations/:id/messages/:messageId — thu hồi tin của chính mình. */
+/** Thu hồi tin nhắn */
 messagesRouter.delete('/conversations/:id/messages/:messageId', requireMember, async (req, res) => {
   const message = await findMessage(req);
   if (!message) return res.status(404).json({ error: 'Không tìm thấy tin nhắn.' });
@@ -170,7 +170,7 @@ messagesRouter.delete('/conversations/:id/messages/:messageId', requireMember, a
   await saveMessageAndBroadcast(res, message);
 });
 
-/** POST .../messages/:messageId/react — mỗi người 1 cảm xúc; bấm lại đúng emoji đang có (hoặc gửi rỗng) = bỏ. */
+/** Thả cảm xúc tin nhắn */
 messagesRouter.post('/conversations/:id/messages/:messageId/react', validate(reactMessageSchema), requireMember, async (req, res) => {
   const message = await findMessage(req);
   if (!message) return res.status(404).json({ error: 'Không tìm thấy tin nhắn.' });

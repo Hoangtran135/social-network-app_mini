@@ -13,7 +13,7 @@ export const authRouter = Router();
 
 const sha256 = (text: string) => crypto.createHash('sha256').update(text).digest('hex');
 
-/** POST /api/auth/register — tạo tài khoản rồi trả token luôn (đăng nhập ngay). */
+/** Đăng ký tài khoản */
 authRouter.post('/register', validate(registerSchema), async (req, res) => {
   const { name, username, email, password } = req.body;
   if (await UserModel.exists({ $or: [{ email: email.toLowerCase() }, { username }] })) {
@@ -31,7 +31,7 @@ authRouter.post('/register', validate(registerSchema), async (req, res) => {
   res.json({ token: createToken(user.id), user: meToJson(user) });
 });
 
-/** POST /api/auth/login — sai email hay sai mật khẩu đều báo cùng một câu (để không lộ email nào đã đăng ký). */
+/** Đăng nhập */
 authRouter.post('/login', validate(loginSchema), async (req, res) => {
   const user = await UserModel.findOne({ email: req.body.email.toLowerCase() });
   if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
@@ -43,10 +43,7 @@ authRouter.post('/login', validate(loginSchema), async (req, res) => {
   res.json({ token: createToken(user.id), user: meToJson(user) });
 });
 
-/**
- * POST /api/auth/forgot-password — gửi email chứa link đặt lại mật khẩu (hạn 1 giờ).
- * Chỉ lưu BẢN BĂM của mã vào database; luôn trả ok để không lộ email nào đã đăng ký.
- */
+/** Gửi email đặt lại mật khẩu */
 authRouter.post('/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
   const user = await UserModel.findOne({ email: req.body.email.toLowerCase() });
   if (user) {
@@ -61,7 +58,7 @@ authRouter.post('/forgot-password', validate(forgotPasswordSchema), async (req, 
   res.json({ ok: true });
 });
 
-/** POST /api/auth/reset-password — đặt mật khẩu mới nếu mã trong link khớp và còn hạn; mã chỉ dùng được 1 lần. */
+/** Đặt lại mật khẩu */
 authRouter.post('/reset-password', validate(resetPasswordSchema), async (req, res) => {
   const { email, token, password } = req.body;
   const user = await UserModel.findOne({ email: email.toLowerCase() });
@@ -75,13 +72,13 @@ authRouter.post('/reset-password', validate(resetPasswordSchema), async (req, re
   res.json({ ok: true });
 });
 
-/** POST /api/auth/logout — chỉ đánh dấu offline; token không bị huỷ ở server, client tự xoá token. */
+/** Đăng xuất */
 authRouter.post('/logout', requireAuth, async (req, res) => {
   await UserModel.findByIdAndUpdate(req.userId, { isOnline: false, lastActive: new Date() });
   res.json({ ok: true });
 });
 
-/** GET /api/auth/me — thông tin người đang đăng nhập (client gọi khi mở app để kiểm tra token còn hợp lệ). */
+/** Lấy thông tin người đang đăng nhập */
 authRouter.get('/me', requireAuth, async (req, res) => {
   const user = await UserModel.findById(req.userId);
   if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
