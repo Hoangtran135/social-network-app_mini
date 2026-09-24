@@ -23,7 +23,7 @@ export const RightSidebar: React.FC = () => {
               Xem ({friendRequests.length})
             </Link>
           </div>
-          {friendRequests.slice(0, 2).map((req) => (
+          {friendRequests.slice(0, 3).map((req) => (
             <div key={req.id} className="p-2.5 rounded-xl bg-slate-50 mb-2">
               <Link to={`/profile/${req.sender.id}`} className="flex items-center gap-2.5">
                 <Avatar src={req.sender.avatar} />
