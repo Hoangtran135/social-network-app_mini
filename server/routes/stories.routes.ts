@@ -48,10 +48,13 @@ storiesRouter.post('/:id/view', async (req, res) => {
   if (!story || !canViewContent(story.user.toString(), req.userId, story.privacy, friendIds, blockedIds)) {
     return res.status(404).json({ error: 'Không tìm thấy story.' });
   }
-  await StoryModel.updateOne(
-    { _id: story._id, 'viewers.user': { $ne: req.userId } },
-    { $push: { viewers: { user: req.userId, viewedAt: new Date() } } }
-  );
+  // Chủ story xem tin của chính mình thì không tính là "người đã xem"
+  if (story.user.toString() !== req.userId) {
+    await StoryModel.updateOne(
+      { _id: story._id, 'viewers.user': { $ne: req.userId } },
+      { $push: { viewers: { user: req.userId, viewedAt: new Date() } } }
+    );
+  }
   const fresh = await StoryModel.findById(story._id).populate(['user', 'viewers.user']);
   res.json({ story: storyToJson(fresh) });
 });

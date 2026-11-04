@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { NotificationModel } from '../models/Notification';
 import { requireAuth } from '../jwtAuth';
 import { notificationToJson } from '../formatResponse';
+import { pageParams } from '../pagination';
 
 // API thông báo (/api/notifications): lấy danh sách (có phân trang), đánh dấu đã đọc.
 // (Thông báo được TẠO ở file createNotification.ts, gọi từ các route khác.)
@@ -11,11 +12,8 @@ notificationsRouter.use(requireAuth);
 
 /** Lấy danh sách thông báo */
 notificationsRouter.get('/', async (req, res) => {
-  const notifications = await NotificationModel.find({ user: req.userId })
-    .sort({ createdAt: -1 })
-    .limit(Math.min(Number(req.query.limit) || 30, 100))
-    .skip(Number(req.query.skip) || 0)
-    .populate('actor');
+  const { limit, skip } = pageParams(req.query, 30);
+  const notifications = await NotificationModel.find({ user: req.userId }).sort({ createdAt: -1 }).limit(limit).skip(skip).populate('actor');
   res.json({ notifications: notifications.map(notificationToJson) });
 });
 

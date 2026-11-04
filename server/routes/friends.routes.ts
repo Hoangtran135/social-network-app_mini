@@ -69,8 +69,11 @@ friendsRouter.post('/requests', validate(sendFriendRequestSchema), async (req, r
   const me = req.userId;
   const { targetUserId } = req.body;
   if (targetUserId === me) return res.status(400).json({ error: 'Không thể gửi lời mời cho chính mình.' });
-  if (await FriendRequestModel.exists({ sender: me, receiver: targetUserId })) return res.status(409).json({ error: 'Đã gửi lời mời trước đó.' });
+  if (!(await UserModel.exists({ _id: targetUserId }))) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
   if (await isBlockedBetween(me, targetUserId)) return res.status(403).json({ error: 'Không thể gửi lời mời kết bạn cho người dùng này.' });
+  if ((await getFriendIds(me)).has(targetUserId)) return res.status(409).json({ error: 'Hai bạn đã là bạn bè.' });
+  if (await FriendRequestModel.exists({ sender: me, receiver: targetUserId })) return res.status(409).json({ error: 'Đã gửi lời mời trước đó.' });
+  if (await FriendRequestModel.exists({ sender: targetUserId, receiver: me })) return res.status(409).json({ error: 'Người này đã gửi lời mời cho bạn, hãy vào mục Lời mời để chấp nhận.' });
 
   const request = await FriendRequestModel.create({ sender: me, receiver: targetUserId });
   await request.populate('sender');
@@ -83,9 +86,10 @@ friendsRouter.post('/requests/:id/accept', async (req, res) => {
   const request = await findRequestOfUser(req.params.id, req.userId, 'receiver');
   if (!request) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
 
+  // Xoá lời mời TRƯỚC bằng thao tác nguyên tử: nếu bấm chấp nhận 2 lần cùng lúc thì chỉ một lần thắng, không tạo quan hệ bạn bè trùng
+  if (!(await FriendRequestModel.findOneAndDelete({ _id: request._id }))) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
   const senderId = request.sender.toString();
   await FriendshipModel.create({ userA: req.userId, userB: senderId });
-  await request.deleteOne();
   await createNotification({ user: senderId, actor: req.userId, type: 'friend_accept', content: 'đã chấp nhận lời mời kết bạn của bạn.', targetId: req.userId, targetType: 'profile' });
   res.json({ ok: true });
 });

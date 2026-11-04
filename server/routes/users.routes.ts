@@ -7,6 +7,7 @@ import { requireAuth } from '../jwtAuth';
 import { validate, updateProfileSchema, changePasswordSchema } from '../validation';
 import { userToJson, meToJson } from '../formatResponse';
 import { isBlockedBetween, getBlockedIds } from '../privacyRules';
+import { pageParams } from '../pagination';
 
 // API người dùng (/api/users): tìm kiếm, xem hồ sơ, sửa hồ sơ, đổi mật khẩu, chặn / bỏ chặn.
 
@@ -25,8 +26,7 @@ usersRouter.get('/', async (req, res) => {
   if (req.query.online === 'true') filter.isOnline = true;
   filter._id = { $nin: [...(await getBlockedIds(req.userId))] };
 
-  const limit = Math.min(Number(req.query.limit) || 60, 100);
-  const skip = Math.max(Number(req.query.skip) || 0, 0);
+  const { limit, skip } = pageParams(req.query, 60);
   const [users, total] = await Promise.all([
     UserModel.find(filter).sort({ joinDate: -1 }).skip(skip).limit(limit),
     UserModel.countDocuments(filter),
@@ -51,7 +51,7 @@ usersRouter.get('/:id', async (req, res) => {
 
 /** Sửa hồ sơ */
 usersRouter.patch('/me', validate(updateProfileSchema), async (req, res) => {
-  const user = await UserModel.findByIdAndUpdate(req.userId, req.body, { new: true });
+  const user = await UserModel.findByIdAndUpdate(req.userId, req.body, { returnDocument: 'after' });
   res.json({ user: meToJson(user) });
 });
 
@@ -71,9 +71,10 @@ usersRouter.post('/:id/block', async (req, res) => {
   const me = req.userId;
   const target = req.params.id;
   if (target === me) return res.status(400).json({ error: 'Không thể tự chặn chính mình.' });
+  if (!(await UserModel.exists({ _id: target }))) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
 
   const [user] = await Promise.all([
-    UserModel.findByIdAndUpdate(me, { $addToSet: { blockedUsers: target } }, { new: true }),
+    UserModel.findByIdAndUpdate(me, { $addToSet: { blockedUsers: target } }, { returnDocument: 'after' }),
     FriendshipModel.deleteOne({ $or: [{ userA: me, userB: target }, { userA: target, userB: me }] }),
     FriendRequestModel.deleteMany({ $or: [{ sender: me, receiver: target }, { sender: target, receiver: me }] }),
   ]);
@@ -82,6 +83,6 @@ usersRouter.post('/:id/block', async (req, res) => {
 
 /** Bỏ chặn người dùng */
 usersRouter.delete('/:id/block', async (req, res) => {
-  const user = await UserModel.findByIdAndUpdate(req.userId, { $pull: { blockedUsers: req.params.id } }, { new: true });
+  const user = await UserModel.findByIdAndUpdate(req.userId, { $pull: { blockedUsers: req.params.id } }, { returnDocument: 'after' });
   res.json({ user: meToJson(user) });
 });

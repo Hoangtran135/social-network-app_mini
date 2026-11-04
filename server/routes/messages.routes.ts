@@ -99,6 +99,7 @@ messagesRouter.post('/conversations', validate(createConversationSchema), async 
   const { participantId, participantIds, name } = req.body;
   const ids: string[] = [...new Set<string>([...(participantIds || [participantId]), req.userId])].filter(Boolean);
 
+  if ((await UserModel.countDocuments({ _id: { $in: ids } })) !== ids.length) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
   if (ids.length >= 3) {
     if (!name) return res.status(400).json({ error: 'Nhóm chat cần có tên khi có từ 3 thành viên trở lên.' });
     const conv = await ConversationModel.create({
@@ -114,6 +115,7 @@ messagesRouter.post('/conversations', validate(createConversationSchema), async 
   }
 
   const otherId = ids.find((id) => id !== req.userId);
+  if (!otherId) return res.status(400).json({ error: 'Không thể tạo cuộc trò chuyện với chính mình.' });
   let conv = await ConversationModel.findOne({ isGroup: false, participants: { $all: [req.userId, otherId], $size: 2 } });
   if (!conv) {
     if (await isBlockedBetween(req.userId, otherId)) return res.status(403).json({ error: 'Không thể nhắn tin với người dùng này.' });

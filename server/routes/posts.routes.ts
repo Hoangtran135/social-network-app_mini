@@ -4,7 +4,9 @@ import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
 import { validate, createPostSchema, updatePostSchema, reactPostSchema, sharePostSchema } from '../validation';
 import { postToJson, getId, Doc } from '../formatResponse';
-import { getFriendAndBlockedIds, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
+import { getFriendAndBlockedIds, getFriendIds, isBlockedBetween, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
+import { UserModel } from '../models/User';
+import { pageParams } from '../pagination';
 
 // API bài viết (/api/posts): bảng tin, kỷ niệm, đăng / sửa / xoá bài, thả cảm xúc, ghim, lưu, chia sẻ.
 // Mọi thay đổi đều được đẩy realtime tới những người được xem bài (post:new / post:update / post:delete).
@@ -27,11 +29,8 @@ async function findPostIfVisible(id: string, userId: string) {
 
 /** Lấy bảng tin */
 postsRouter.get('/', async (req, res) => {
-  const posts = await PostModel.find()
-    .sort({ createdAt: -1 })
-    .limit(Math.min(Number(req.query.limit) || 30, 100))
-    .skip(Number(req.query.skip) || 0)
-    .populate(POPULATE);
+  const { limit, skip } = pageParams(req.query, 30);
+  const posts = await PostModel.find().sort({ createdAt: -1 }).limit(limit).skip(skip).populate(POPULATE);
   const { friendIds, blockedIds } = await getFriendAndBlockedIds(req.userId);
   const visible = posts.filter((p: Doc) => canViewContent(getId(p.author), req.userId, p.privacy, friendIds, blockedIds));
   res.json({ posts: visible.map((p: Doc) => postToJson(p, req.userId)) });
@@ -58,7 +57,14 @@ postsRouter.get('/:id', async (req, res) => {
 postsRouter.post('/', validate(createPostSchema), async (req, res) => {
   const { wallOwnerId, taggedUserIds = [], ...fields } = req.body;
   const me = req.userId;
+  if (!fields.content && !fields.images?.length && !fields.video) return res.status(400).json({ error: 'Bài viết không được để trống.' });
   const wallOwner = wallOwnerId && wallOwnerId !== me ? wallOwnerId : undefined;
+  // Đăng lên tường người khác: người đó phải tồn tại, không chặn nhau, và hai bên là bạn bè (đúng như giao diện cho phép)
+  if (wallOwner) {
+    if (!(await UserModel.exists({ _id: wallOwner }))) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+    if (await isBlockedBetween(me, wallOwner)) return res.status(403).json({ error: 'Không thể đăng lên tường của người dùng này.' });
+    if (!(await getFriendIds(me)).has(wallOwner)) return res.status(403).json({ error: 'Chỉ bạn bè mới được đăng lên tường của nhau.' });
+  }
   const tagged: string[] = [...new Set<string>(taggedUserIds)].filter((id) => id !== me);
 
   const post = await PostModel.create({ ...fields, author: me, wallOwner, taggedUsers: tagged });
@@ -150,15 +156,16 @@ postsRouter.post('/:id/share', validate(sharePostSchema), async (req, res) => {
   const original = await findPostIfVisible(req.params.id, req.userId);
   if (!original) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
-  original.sharesCount = (original.sharesCount || 0) + 1;
-  await original.save();
+  await PostModel.updateOne({ _id: original._id }, { $inc: { sharesCount: 1 } });
+  original.sharesCount = (original.sharesCount || 0) + 1; // để phản hồi / sự kiện realtime hiện số mới
 
   const quote = `[Chia sẻ từ @${original.author.name}]:\n${original.content}`;
   const shared = await PostModel.create({
     author: req.userId,
     content: req.body.message ? `${req.body.message}\n\n${quote}` : quote,
     images: original.images,
-    privacy: 'public',
+    // Không làm rộng quyền xem: bài gốc chỉ-bạn-bè thì bài chia sẻ cũng chỉ bạn bè của người chia sẻ xem được
+    privacy: original.privacy === 'public' ? 'public' : 'friends',
   });
   await shared.populate(POPULATE);
   res.json({ post: postToJson(shared, req.userId) });

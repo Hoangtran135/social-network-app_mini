@@ -42,12 +42,18 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   const post = await PostModel.findById(postId);
   if (!post || !(await canViewPost(post, me))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
+  if (parentId) {
+    const parent = await CommentModel.findById(parentId).select('post');
+    if (!parent || parent.post.toString() !== postId) return res.status(400).json({ error: 'Bình luận được trả lời không thuộc bài viết này.' });
+  }
+  if (!content && !image) return res.status(400).json({ error: 'Bình luận không được để trống.' });
+
   const tagged: string[] = [...new Set<string>(taggedUserIds)].filter((id) => id !== me);
   const comment = await CommentModel.create({ post: postId, author: me, content, image, parent: parentId, taggedUsers: tagged });
   await comment.populate(['author', 'taggedUsers']);
 
-  post.commentsCount = (post.commentsCount || 0) + 1;
-  await post.save();
+  // Cập nhật nguyên tử ($inc) để nhiều người bình luận cùng lúc không làm mất lượt đếm
+  await PostModel.updateOne({ _id: post._id }, { $inc: { commentsCount: 1 } });
 
   const authorId = post.author.toString();
   const target = { targetId: postId, targetType: 'post' as const };
@@ -77,10 +83,7 @@ commentsRouter.delete('/:id', async (req, res) => {
     await createNotification({ user: comment.author.toString(), actor: req.userId, type: 'system', content: 'đã xóa bình luận của bạn khỏi bài viết của họ.', targetId: post.id, targetType: 'post' });
   }
   await comment.deleteOne();
-  if (post) {
-    post.commentsCount = Math.max(0, (post.commentsCount || 0) - 1);
-    await post.save();
-  }
+  if (post) await PostModel.updateOne({ _id: post._id }, [{ $set: { commentsCount: { $max: [0, { $subtract: [{ $ifNull: ['$commentsCount', 0] }, 1] }] } } }], { updatePipeline: true });
   res.json({ ok: true });
   if (post) emitToAllowedViewers(post.privacy, post.author.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, req.userId);
 });
