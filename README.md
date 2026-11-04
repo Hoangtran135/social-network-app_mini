@@ -70,6 +70,27 @@ Tài khoản demo có sẵn trong `db/export/` (mật khẩu chung: `123456`):
 - Admin: `minhanh@demo.vn`
 - User thường: `quocbao@demo.vn`, `camle@demo.vn`, `ducduy@demo.vn`, `thuha@demo.vn`, `anhkhoa@demo.vn`, `ngoclinh@demo.vn`, `giaphuc@demo.vn`
 
+## Kiểm thử (thư mục `tests/`)
+
+Bộ test dùng **Vitest** (hơn 3100 test, phủ 100% dòng lệnh của `server/` và `src/`), gồm:
+
+- `tests/server/` — test API + realtime của server (supertest, socket.io-client): tài khoản, người dùng, bạn bè, bài viết, bình luận, tin nhắn, story, thông báo, bảo mật, upload, tình huống đồng thời và quyền riêng tư của sự kiện realtime.
+- `tests/client/` — test giao diện bằng Testing Library + jsdom. Ngoài test từng mảnh nhỏ, còn có test **tích hợp toàn ứng dụng**: render trang thật với Context thật trước một backend giả trong bộ nhớ (`fakeServer.ts`) — đăng nhập, bảng tin, bài viết, bình luận, chat, story, hồ sơ, bạn bè, thông báo, cài đặt, realtime…
+- Các file `matrix-*.test.*` thử mọi tổ hợp (quyền riêng tư × quan hệ × thao tác, giá trị biên của mọi schema, id sai, unicode, phân trang…).
+
+```bash
+npm test              # chạy toàn bộ
+npm run test:server   # chỉ server
+npm run test:client   # chỉ giao diện
+npm run test:coverage # chạy + đo độ phủ (có ngưỡng tối thiểu, thấp hơn thì thất bại)
+npm run test:watch    # chạy lại khi sửa code
+npm run typecheck     # kiểm tra kiểu TypeScript (cả server và giao diện)
+```
+
+Test server cần MongoDB đang chạy (mặc định `mongodb://127.0.0.1:27017`, đổi bằng biến môi trường `TEST_MONGODB_URI`).
+**An toàn:** mỗi file test tự tạo một database riêng tên `social-network-test-<mã>` rồi xoá khi xong, không đụng tới dữ liệu thật.
+GitHub Actions (`.github/workflows/test.yml`) tự chạy typecheck + lint + test cho mọi pull request.
+
 ## Triển khai lên VPS (Windows Server)
 
 Toàn bộ script nằm trong thư mục `deploy/`. Mọi lệnh chạy trong **PowerShell "Run as Administrator"** trên VPS (kết nối bằng Remote Desktop).

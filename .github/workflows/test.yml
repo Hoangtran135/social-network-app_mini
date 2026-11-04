@@ -1,0 +1,29 @@
+name: Test
+
+# Chạy bộ test (server + giao diện) cho mọi pull request và mọi lần push lên main.
+# Test server cần MongoDB: workflow tự bật một container MongoDB tạm, mỗi file test dùng database riêng rồi xoá đi.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    env:
+      TEST_MONGODB_URI: mongodb://127.0.0.1:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:coverage
