@@ -31,7 +31,7 @@ export const ForgotPasswordPage: React.FC = () => {
           <h2 className="text-xl font-black text-slate-800 mb-2">Quên mật khẩu?</h2>
           <p className="text-xs text-slate-500 mb-5">Nhập email đăng ký, chúng tôi sẽ gửi liên kết để đặt lại mật khẩu mới.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField label="Email tài khoản" icon={Mail} type="email" required placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <FormField label="Email tài khoản" icon={Mail} type="email" required autoFocus autoComplete="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             <SubmitButton loading={loading}>{loading ? 'Đang gửi...' : 'Gửi yêu cầu khôi phục'}</SubmitButton>
           </form>
         </>

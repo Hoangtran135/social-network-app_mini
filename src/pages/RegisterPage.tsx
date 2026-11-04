@@ -29,20 +29,20 @@ export const RegisterPage: React.FC = () => {
       <h2 className="text-xl font-black text-slate-800 mb-5">Đăng ký tài khoản</h2>
       <ErrorBox message={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Họ và tên" icon={UserIcon} required placeholder="Nguyễn Văn A" value={form.name} onChange={setField('name')} />
+        <FormField label="Họ và tên" icon={UserIcon} required placeholder="Nguyễn Văn A" value={form.name} onChange={setField('name')} autoComplete="name" autoFocus />
         <FormField
           label="Tên người dùng (@username)"
           icon={AtSign}
           required
-          placeholder="nguyenvana"
+          placeholder="nguyenvana" autoComplete="username" autoCapitalize="none"
           value={form.username}
           // username: chữ thường, không khoảng trắng
           onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s+/g, '') })}
         />
-        <FormField label="Email" icon={Mail} type="email" required placeholder="name@example.com" value={form.email} onChange={setField('email')} />
-        <FormField label="Mật khẩu" icon={Lock} type="password" required placeholder="Tối thiểu 6 ký tự" value={form.password} onChange={setField('password')} />
+        <FormField label="Email" icon={Mail} type="email" required autoComplete="email" placeholder="name@example.com" value={form.email} onChange={setField('email')} />
+        <FormField label="Mật khẩu" icon={Lock} type="password" required minLength={6} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" value={form.password} onChange={setField('password')} />
         <SubmitButton loading={loading}>
-          {loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'} <ArrowRight className="w-4 h-4" />
+          {loading ? 'Đang tạo tài khoản...' : <>Đăng ký tài khoản <ArrowRight className="w-4 h-4" /></>}
         </SubmitButton>
       </form>
       <p className="mt-6 text-center text-xs text-slate-500">

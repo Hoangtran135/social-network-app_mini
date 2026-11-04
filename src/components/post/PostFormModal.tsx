@@ -5,6 +5,7 @@ import { useSocial } from '../../context/SocialContext';
 import { Post, Privacy, User } from '../../types';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useMention } from '../../hooks/useMention';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { feelingText } from '../../utils/format';
 import { FriendPicker, toggleId } from '../FriendPicker';
 import { MentionSuggestions } from './MentionSuggestions';
@@ -33,12 +34,15 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
   const imageUpload = useFileUpload((files) => setImages((list) => [...list, ...files.map((f) => f.url)]));
   const videoUpload = useFileUpload((files) => setVideo(files[0].url));
 
+  useEscapeKey(onClose);
+
+  const isUploading = imageUpload.isUploading || videoUpload.isUploading;
   const isEmpty = !content.trim() && images.length === 0 && !video;
   const taggedUsers = friends.filter((f) => taggedIds.includes(f.id));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEmpty) return;
+    if (isEmpty || isUploading) return;
     const data = { content, privacy, feeling: feeling || undefined, images, video: video || undefined };
     if (isEdit) updatePost(post.id, data);
     else createPost({ ...data, wallOwner, taggedUserIds: taggedIds });
@@ -46,19 +50,25 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-end sm:items-center justify-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <form
+        onSubmit={handleSubmit}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Đăng bài"
+        className="animate-pop bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 max-h-[92dvh] overflow-y-auto overscroll-contain"
+      >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <h3 className="font-bold text-slate-800">{isEdit ? 'Chỉnh sửa bài viết' : wallOwner ? `Đăng lên tường của ${wallOwner.name}` : 'Tạo bài viết mới'}</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+          <button type="button" aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex items-center gap-3">
-          <img src={currentUser?.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
-          <div>
-            <div className="font-bold text-sm text-slate-800">
+          <img src={currentUser?.avatar} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+          <div className="min-w-0">
+            <div className="font-bold text-sm text-slate-800 break-words">
               {currentUser?.name}
               {feeling && <span className="font-normal text-slate-500 text-xs"> {feelingText(feeling)}</span>}
               {taggedUsers.length > 0 && <span className="font-normal text-slate-500 text-xs"> cùng với {taggedUsers.map((u) => u.name).join(', ')}</span>}
@@ -79,7 +89,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
             value={content}
             onChange={mention.onChange}
             placeholder={wallOwner ? `Viết gì đó cho ${wallOwner.name}...` : 'Bạn đang nghĩ gì thế? (gõ @ để gắn thẻ bạn bè)'}
-            className="w-full text-sm resize-none focus:outline-none"
+            className="w-full text-sm resize-none focus:outline-none min-h-24"
           />
           <MentionSuggestions matches={mention.matches} onSelect={mention.select} />
         </div>
@@ -89,7 +99,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
             {images.map((img, i) => (
               <div key={img} className="relative aspect-square rounded-lg overflow-hidden">
                 <img src={img} alt="" className="w-full h-full object-cover" />
-                <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute top-1 right-1 p-1 bg-slate-900/80 text-white rounded-full">
+                <button type="button" aria-label="Bỏ ảnh" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute top-1 right-1 p-1 bg-slate-900/80 text-white rounded-full">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -99,12 +109,12 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         {video && (
           <div className="relative">
             <video src={video} controls className="w-full max-h-64 rounded-xl bg-black" />
-            <button type="button" onClick={() => setVideo('')} className="absolute top-2 right-2 p-1.5 bg-slate-900/80 text-white rounded-full">
+            <button type="button" aria-label="Bỏ video" onClick={() => setVideo('')} className="absolute top-2 right-2 p-1.5 bg-slate-900/80 text-white rounded-full">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
-        {(imageUpload.isUploading || videoUpload.isUploading) && (
+        {isUploading && (
           <p className="flex items-center gap-2 text-xs text-slate-500">
             <Loader2 className="w-4 h-4 animate-spin" /> Đang tải lên...
           </p>
@@ -152,7 +162,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
           </div>
         </div>
 
-        <button type="submit" disabled={isEmpty} className="btn-primary w-full py-2.5 text-sm disabled:opacity-50">
+        <button type="submit" disabled={isEmpty || isUploading} className="btn-primary w-full py-3 text-sm sticky bottom-0">
           {isEdit ? 'Lưu thay đổi' : wallOwner ? 'Đăng lên tường' : 'Đăng bài viết'}
         </button>
       </form>

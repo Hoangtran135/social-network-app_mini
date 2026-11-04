@@ -18,12 +18,12 @@ type Tab = 'friends' | 'requests' | 'suggestions';
 /** Thẻ một người: ảnh + tên + @username + dòng phụ; actions = các nút bên dưới. */
 const UserCard: React.FC<{ user: User; note?: string; actions: React.ReactNode }> = ({ user, note, actions }) => (
   <div className="card p-4 flex flex-col gap-4">
-    <Link to={`/profile/${user.id}`} className="flex items-center gap-3">
-      <img src={user.avatar} alt="" className="w-14 h-14 rounded-2xl object-cover" />
+    <Link to={`/profile/${user.id}`} className="flex items-center gap-3 min-w-0">
+      <img src={user.avatar} alt="" loading="lazy" className="w-14 h-14 rounded-2xl object-cover shrink-0" />
       <div className="min-w-0 text-xs">
         <b className="text-sm text-slate-900 block truncate">{user.name}</b>
-        <span className="text-slate-400">@{user.username}</span>
-        {note && <p className="text-blue-600 mt-1">{note}</p>}
+        <span className="text-slate-400 block truncate">@{user.username}</span>
+        {note && <p className="text-blue-600 mt-1 truncate">{note}</p>}
       </div>
     </Link>
     <div className="flex gap-2">{actions}</div>
@@ -53,12 +53,13 @@ export const FriendsPage: React.FC = () => {
       <PageHeader icon={Users} title="Bạn bè" subtitle={`${friends.length} bạn bè · ${friendRequests.length} lời mời`} />
 
       <div className="card p-3 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <TabButton icon={UserCheck} active={tab === 'friends'} onClick={() => setTab('friends')}>
             Bạn bè ({friends.length})
           </TabButton>
           <TabButton icon={Clock} active={tab === 'requests'} onClick={() => setTab('requests')}>
-            Lời mời ({friendRequests.length})
+            Lời mời
+            {friendRequests.length > 0 && <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] flex items-center justify-center">{friendRequests.length}</span>}
           </TabButton>
           <TabButton icon={Sparkles} active={tab === 'suggestions'} onClick={() => setTab('suggestions')}>
             Gợi ý ({suggestions.length})
@@ -66,15 +67,27 @@ export const FriendsPage: React.FC = () => {
         </div>
         {tab === 'friends' && (
           <div className="relative sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm bạn bè..." className="input pl-9 py-2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm bạn bè..." aria-label="Tìm bạn bè" className="input pl-9 py-2" />
           </div>
         )}
       </div>
 
       {tab === 'friends' && (
         <>
-          {shownFriends.length === 0 && <EmptyState icon={Users} title="Không có bạn bè nào" description="Hãy xem tab Gợi ý để kết nối với mọi người!" />}
+          {shownFriends.length === 0 && (
+            <EmptyState
+              icon={Users}
+              title={search ? 'Không tìm thấy bạn bè nào' : 'Chưa có bạn bè nào'}
+              description={search ? `Không có kết quả cho "${search}".` : 'Hãy xem tab Gợi ý để kết nối với mọi người!'}
+            >
+              {!search && (
+                <button onClick={() => setTab('suggestions')} className="btn-primary">
+                  Xem gợi ý kết bạn
+                </button>
+              )}
+            </EmptyState>
+          )}
           <Grid>
             {shownFriends.map((f) => (
               <UserCard
@@ -86,7 +99,7 @@ export const FriendsPage: React.FC = () => {
                     <button onClick={async () => openChat(await getOrCreateConversation(f))} className="btn-secondary flex-1 flex items-center justify-center gap-1.5">
                       <MessageCircle className="w-4 h-4" /> Nhắn tin
                     </button>
-                    <button title="Hủy kết bạn" onClick={async () => (await confirm(`Hủy kết bạn với ${f.name}?`)) && removeFriend(f.id)} className="btn-secondary px-3">
+                    <button title="Hủy kết bạn" aria-label="Hủy kết bạn" onClick={async () => (await confirm(`Hủy kết bạn với ${f.name}?`)) && removeFriend(f.id)} className="btn-secondary px-3">
                       <UserX className="w-4 h-4" />
                     </button>
                   </>
@@ -99,7 +112,8 @@ export const FriendsPage: React.FC = () => {
 
       {tab === 'requests' && (
         <>
-          {friendRequests.length === 0 && <EmptyState icon={UserPlus} title="Không có lời mời kết bạn nào" />}
+          {friendRequests.length === 0 && sentFriendRequests.length === 0 && <EmptyState icon={UserPlus} title="Không có lời mời kết bạn nào" description="Khi có người gửi lời mời, bạn sẽ thấy ở đây." />}
+          {friendRequests.length > 0 && <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Lời mời đã nhận ({friendRequests.length})</h3>}
           <Grid>
             {friendRequests.map((r) => (
               <UserCard
@@ -121,7 +135,7 @@ export const FriendsPage: React.FC = () => {
 
           {sentFriendRequests.length > 0 && (
             <>
-              <h3 className="text-xs font-bold text-slate-500 uppercase mt-8 mb-3">Lời mời đã gửi ({sentFriendRequests.length})</h3>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-8 mb-3">Lời mời đã gửi ({sentFriendRequests.length})</h3>
               <Grid>
                 {sentFriendRequests.map((r) =>
                   r.receiver ? (

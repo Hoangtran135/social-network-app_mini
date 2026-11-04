@@ -27,8 +27,8 @@ export const ConfirmDialogProvider: React.FC<{ children: React.ReactNode }> = ({
     <ConfirmDialogContext.Provider value={confirm}>
       {children}
       {message && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4" onClick={() => close(false)} onKeyDown={(e) => e.key === 'Escape' && close(false)}>
+          <div role="alertdialog" aria-modal="true" className="animate-pop bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2.5 text-rose-600">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="font-bold text-slate-800">Xác nhận</h3>

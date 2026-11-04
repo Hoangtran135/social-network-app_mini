@@ -6,21 +6,16 @@ export function timeAgo(iso: string | undefined) {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (Number.isNaN(seconds)) return iso;
   if (seconds < 10) return 'Vừa xong';
+  if (seconds < 60) return `${seconds} giây trước`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} phút trước`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} giờ trước`;
 
-  const steps: [number, string][] = [
-    [60, 'giây'],
-    [60, 'phút'],
-    [24, 'giờ'],
-    [7, 'ngày'],
-    [4.35, 'tuần'],
-    [12, 'tháng'],
-  ];
-  let value = seconds;
-  for (const [size, unit] of steps) {
-    if (value < size) return `${Math.floor(value)} ${unit} trước`;
-    value /= size;
-  }
-  return `${Math.floor(value)} năm trước`;
+  // Từ đây tính theo số ngày (không cộng dồn hệ số làm tròn, tránh lệch kiểu "đúng 1 năm" lại ra "11 tháng")
+  const days = seconds / 86400;
+  if (days < 7) return `${Math.floor(days)} ngày trước`;
+  if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
+  if (days < 365) return `${Math.max(1, Math.floor(days / 30.44))} tháng trước`;
+  return `${Math.floor(days / 365)} năm trước`;
 }
 
 /** "hạnh phúc 😊" → "đang cảm thấy hạnh phúc 😊"; "đang du lịch ✈️" giữ nguyên. */

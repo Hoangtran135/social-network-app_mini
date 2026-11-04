@@ -60,6 +60,9 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   const title = conversation.isGroup ? conversation.name : conversation.nicknames?.[partner!.id] || partner?.name;
   const avatar = conversation.isGroup ? conversation.avatar : partner?.avatar;
 
+  // Trên điện thoại chat chiếm toàn màn hình nên bấm vào thanh tiêu đề không thu nhỏ (chỉ có nút đóng)
+  const toggleMinimize = () => window.matchMedia('(min-width: 640px)').matches && onToggleMinimize();
+
   const send = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() && attachments.length === 0) return;
@@ -76,10 +79,11 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
 
   if (minimized) {
     return (
-      <div onClick={onToggleMinimize} style={{ right }} className="fixed bottom-0 w-[280px] h-12 px-3 bg-white rounded-t-xl shadow-2xl border border-slate-200 z-40 cursor-pointer flex items-center gap-2">
+      <div onClick={onToggleMinimize} style={{ right }} className="max-sm:hidden fixed bottom-0 w-[280px] h-12 px-3 bg-white rounded-t-xl shadow-2xl border border-slate-200 z-40 cursor-pointer flex items-center gap-2">
         <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
         <span className="flex-1 font-bold text-xs text-slate-800 truncate">{title}</span>
         <button
+          aria-label="Đóng cuộc trò chuyện"
           onClick={(e) => {
             e.stopPropagation(); // không để cú bấm "đóng" lan ra thanh (sẽ vừa đóng vừa mở rộng)
             onClose();
@@ -93,17 +97,20 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   }
 
   return (
-    <div style={{ right }} className="fixed bottom-0 w-[330px] h-[440px] bg-white rounded-t-2xl shadow-2xl border border-slate-200 z-40 flex flex-col">
+    <div
+      style={{ right }}
+      className="max-sm:right-0! max-sm:inset-0 max-sm:w-full max-sm:h-[100dvh] max-sm:rounded-none fixed bottom-0 w-[330px] h-[440px] bg-white rounded-t-2xl shadow-2xl border border-slate-200 z-40 flex flex-col"
+    >
       {/* ----- Thanh tiêu đề (màu chủ đề): bấm để thu nhỏ ----- */}
-      <div onClick={onToggleMinimize} style={{ backgroundColor: color }} className="h-14 px-3 flex items-center gap-2 text-white cursor-pointer rounded-t-2xl">
-        <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+      <div onClick={toggleMinimize} style={{ backgroundColor: color }} className="h-14 px-3 flex items-center gap-2 text-white sm:cursor-pointer sm:rounded-t-2xl shrink-0">
+        <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="font-bold text-xs truncate">{title}</div>
           {partner && <div className="text-[10px] opacity-80">{partner.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}</div>}
         </div>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <div className="relative" ref={optionsRef}>
-            <button onClick={() => setPanel(panel === 'options' ? null : 'options')} className="p-1.5 rounded-full hover:bg-white/20">
+            <button aria-label="Tuỳ chọn" onClick={() => setPanel(panel === 'options' ? null : 'options')} className="p-2 rounded-full hover:bg-white/20">
               <MoreHorizontal className="w-4 h-4" />
             </button>
             {panel === 'options' && (
@@ -133,10 +140,10 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
               </div>
             )}
           </div>
-          <button onClick={onToggleMinimize} className="p-1.5 rounded-full hover:bg-white/20">
+          <button aria-label="Thu nhỏ" onClick={onToggleMinimize} className="max-sm:hidden p-2 rounded-full hover:bg-white/20">
             <Minus className="w-4 h-4" />
           </button>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20">
+          <button aria-label="Đóng cuộc trò chuyện" onClick={onClose} className="p-2 rounded-full hover:bg-white/20">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -159,7 +166,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
       )}
 
       {/* ----- Danh sách tin nhắn ----- */}
-      <div className="flex-1 p-3 overflow-y-auto space-y-3 bg-slate-50">
+      <div className="flex-1 p-3 overflow-y-auto overscroll-contain space-y-3 bg-slate-50">
         {list?.length === 0 && (
           <p className="h-full flex flex-col items-center justify-center text-xs text-slate-400">
             <MessageCircle className="w-8 h-8 mb-2" /> Hãy gửi lời chào để bắt đầu trò chuyện!
@@ -192,11 +199,11 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
         </div>
       )}
 
-      <form onSubmit={send} className="p-2 border-t border-slate-200 flex items-center gap-1">
+      <form onSubmit={send} className="p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-slate-200 flex items-center gap-1 shrink-0">
         <input ref={imageUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={imageUpload.onChange} />
         <input ref={fileUpload.inputRef} type="file" className="hidden" onChange={fileUpload.onChange} />
         <div className="relative">
-          <button type="button" onClick={() => setPanel(panel === 'attach' ? null : 'attach')} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600">
+          <button type="button" aria-label="Đính kèm" onClick={() => setPanel(panel === 'attach' ? null : 'attach')} className="p-2 rounded-lg text-slate-500 hover:text-blue-600">
             {imageUpload.isUploading || fileUpload.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
           </button>
           {panel === 'attach' && (
@@ -210,11 +217,11 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
             </div>
           )}
         </div>
-        <button type="button" onClick={() => setPanel(panel === 'emoji' ? null : 'emoji')} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600">
+        <button type="button" aria-label="Emoji" onClick={() => setPanel(panel === 'emoji' ? null : 'emoji')} className="p-2 rounded-lg text-slate-500 hover:text-blue-600">
           <Smile className="w-4 h-4" />
         </button>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhập tin nhắn..." className="flex-1 px-3 py-1.5 text-xs bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500" />
-        <button type="submit" disabled={!text.trim() && attachments.length === 0} style={{ backgroundColor: color }} className="p-2 rounded-full text-white disabled:opacity-40">
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhập tin nhắn..." className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500" />
+        <button type="submit" aria-label="Gửi" disabled={!text.trim() && attachments.length === 0} style={{ backgroundColor: color }} className="p-2.5 rounded-full shrink-0 text-white disabled:opacity-40">
           <Send className="w-3.5 h-3.5" />
         </button>
       </form>
@@ -240,15 +247,15 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
 
   return (
     <div className={`group flex items-end gap-1.5 ${isMine ? 'flex-row-reverse' : ''}`}>
-      {!isMine && <img src={m.senderAvatar} alt="" className="w-6 h-6 rounded-full object-cover" />}
+      {!isMine && <img src={m.senderAvatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />}
 
-      <div className="max-w-[75%]">
+      <div className="max-w-[75%] min-w-0">
         <div style={isMine && !m.isRecalled ? { backgroundColor: color } : undefined} className={`rounded-2xl px-3 py-2 text-xs ${m.isRecalled ? 'bg-slate-100 text-slate-400 italic' : isMine ? 'text-white' : 'bg-white text-slate-800 border border-slate-200'}`}>
           {m.isRecalled ? (
             'Tin nhắn đã được thu hồi'
           ) : (
             <>
-              {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
+              {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
               {m.sharedPostId && !m.content && <p>📄 Đã chia sẻ một bài viết</p>}
               {m.attachments?.map((a) =>
                 a.type === 'image' ? (
@@ -273,8 +280,8 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
       </div>
 
       {!m.isRecalled && (
-        <div className="relative flex gap-0.5 opacity-0 group-hover:opacity-100">
-          <button onClick={() => setShowReactions(!showReactions)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500">
+        <div className="relative flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
+          <button aria-label="Thả cảm xúc" onClick={() => setShowReactions(!showReactions)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500">
             <SmilePlus className="w-3 h-3" />
           </button>
           {isMine && (

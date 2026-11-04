@@ -29,15 +29,19 @@ export const LoginPage: React.FC = () => {
       <h2 className="text-xl font-black text-slate-800 mb-5">Đăng nhập tài khoản</h2>
       <ErrorBox message={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Email" icon={Mail} type="email" required placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <FormField label="Email" icon={Mail} type="email" required autoFocus autoComplete="email" placeholder="name@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
         <FormField
           label="Mật khẩu"
           icon={Lock}
           type="password"
           required
+          autoComplete="current-password"
           placeholder="••••••••"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError('');
+          }}
           labelRight={
             <Link to="/forgot-password" className="text-xs text-blue-600 hover:underline font-semibold">
               Quên mật khẩu?
@@ -45,7 +49,7 @@ export const LoginPage: React.FC = () => {
           }
         />
         <SubmitButton loading={loading}>
-          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <ArrowRight className="w-4 h-4" />
+          {loading ? 'Đang đăng nhập...' : <>Đăng nhập <ArrowRight className="w-4 h-4" /></>}
         </SubmitButton>
       </form>
       <p className="mt-6 text-center text-xs text-slate-500">

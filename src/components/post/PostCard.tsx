@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, LucideIcon } from 'lucide-react';
+import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, X, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { useChatWindows } from '../../context/ChatWindowsContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Post, ReactionType } from '../../types';
 import { feelingText, timeAgo } from '../../utils/format';
 import { UserLinks } from '../ui';
@@ -27,9 +28,33 @@ const REACTIONS: Record<ReactionType, { emoji: string; label: string; color: str
 };
 
 const PRIVACY_ICONS = { public: Globe, friends: Users, only_me: Lock };
+const PRIVACY_LABELS = { public: 'Công khai', friends: 'Bạn bè', only_me: 'Chỉ mình tôi' };
+
+/** Lưới ảnh của bài: 1 ảnh = ảnh lớn; 2 ảnh = 2 cột; 3 ảnh = 1 ảnh lớn bên trái + 2 ảnh nhỏ; từ 4 ảnh = lưới 2x2 (ảnh thứ 4 có "+N" nếu còn nữa). */
+const ImageGrid: React.FC<{ images: string[]; onOpen: (img: string) => void }> = ({ images, onOpen }) => {
+  const shown = images.slice(0, 4);
+  const extra = images.length - shown.length;
+  const layout = images.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
+  return (
+    <div className={`grid gap-0.5 ${layout}`}>
+      {shown.map((img, i) => (
+        <button
+          key={img}
+          type="button"
+          aria-label="Xem ảnh lớn"
+          onClick={() => onOpen(img)}
+          className={`relative block overflow-hidden bg-slate-100 ${images.length === 1 ? 'max-h-[32rem]' : images.length === 3 && i === 0 ? 'row-span-2' : 'aspect-square'}`}
+        >
+          <img src={img} alt="" loading="lazy" className={`w-full object-cover ${images.length === 1 ? 'max-h-[32rem]' : 'h-full'}`} />
+          {extra > 0 && i === 3 && <span className="absolute inset-0 bg-black/55 text-white text-2xl font-bold flex items-center justify-center">+{extra}</span>}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 const MenuItem: React.FC<{ icon: LucideIcon; label: string; onClick: () => void; danger?: boolean }> = ({ icon: Icon, label, onClick, danger }) => (
-  <button onClick={onClick} className={`w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-slate-50 ${danger ? 'text-rose-600' : 'text-slate-700'}`}>
+  <button onClick={onClick} className={`w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-slate-50 whitespace-nowrap ${danger ? 'text-rose-600' : 'text-slate-700'}`}>
     <Icon className="w-4 h-4" /> {label}
   </button>
 );
@@ -46,8 +71,16 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [showSendToFriend, setShowSendToFriend] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const menuRef = useClickOutside(() => setMenu(null));
+  const hasReactions = post.reactions.length > 0;
+  const hasStats = hasReactions || post.commentsCount > 0 || post.sharesCount > 0;
   // Rê chuột vào nút Thích 300ms mới hiện bảng cảm xúc
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Màn hình cảm ứng không có "rê chuột" → nhấn giữ nút Thích 400ms để mở bảng cảm xúc
+  const longPress = useRef(false);
+  useEscapeKey(() => {
+    setPreviewImage(null);
+    setShowSendToFriend(false);
+  });
 
   const isOwner = currentUser?.id === post.author.id;
   const myReaction = post.reactions.find((r) => r.userId === currentUser?.id);
@@ -74,11 +107,11 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       <div className="p-5 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link to={`/profile/${post.author.id}`}>
-            <img src={post.author.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
+            <img src={post.author.avatar} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover shrink-0" />
           </Link>
           <div className="min-w-0 text-sm">
             <div>
-              <Link to={`/profile/${post.author.id}`} className="font-bold text-slate-900 hover:text-blue-600">
+              <Link to={`/profile/${post.author.id}`} className="font-bold text-slate-900 hover:text-blue-600 break-words">
                 {post.author.name}
               </Link>
               {post.wallOwnerId && (
@@ -95,23 +128,25 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
               )}
               {post.feeling && <span className="text-xs text-slate-500"> {feelingText(post.feeling)}</span>}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+            <div className="flex items-center flex-wrap gap-x-1.5 text-xs text-slate-400 mt-0.5">
               {post.pinned && <span className="text-blue-600 font-semibold">📌 Đã ghim ·</span>}
               <span>{timeAgo(post.createdAt)}</span>
               {post.updatedAt && <span className="italic">(đã chỉnh sửa)</span>}
               <span>·</span>
-              <PrivacyIcon className="w-3.5 h-3.5" />
+              <span title={PRIVACY_LABELS[post.privacy]} className="inline-flex">
+                <PrivacyIcon className="w-3.5 h-3.5" />
+              </span>
               {post.location && <span>· 📍 {post.location}</span>}
             </div>
           </div>
         </div>
 
         <div className="relative" ref={menu === 'options' ? menuRef : undefined}>
-          <button onClick={() => setMenu(menu === 'options' ? null : 'options')} className="p-2 rounded-full hover:bg-slate-100 text-slate-500">
+          <button onClick={() => setMenu(menu === 'options' ? null : 'options')} aria-label="Tuỳ chọn bài viết" aria-expanded={menu === 'options'} className="p-2 rounded-full hover:bg-slate-100 text-slate-500">
             <MoreHorizontal className="w-5 h-5" />
           </button>
           {menu === 'options' && (
-            <div className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-semibold">
+            <div className="animate-pop absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-semibold">
               <MenuItem icon={Bookmark} label={post.isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'} onClick={run(() => toggleSavePost(post.id))} />
               <MenuItem
                 icon={Copy}
@@ -139,34 +174,31 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       </div>
 
       {/* ----- Nội dung, video, lưới ảnh (bấm ảnh để phóng to) ----- */}
-      <p className="px-5 pb-3 text-slate-800 whitespace-pre-line">{post.content}</p>
-      {post.video && <video src={post.video} controls className="w-full max-h-[32rem] bg-black" />}
-      {post.images && (
-        <div className={`grid gap-1 ${post.images.length === 1 ? 'grid-cols-1' : post.images.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          {post.images.map((img) => (
-            <img key={img} src={img} alt="" onClick={() => setPreviewImage(img)} className="w-full aspect-video object-cover cursor-pointer" />
-          ))}
+      {post.content && <p className="px-5 pb-3 text-slate-800 whitespace-pre-line break-words">{post.content}</p>}
+      {post.video && <video src={post.video} controls preload="metadata" className="w-full max-h-[32rem] bg-black" />}
+      {!!post.images?.length && <ImageGrid images={post.images} onOpen={setPreviewImage} />}
+
+      {/* ----- Số cảm xúc, bình luận, chia sẻ ----- */}
+      {hasStats && (
+        <div className="px-5 py-2.5 flex items-center justify-between gap-3 text-xs text-slate-500 border-b border-slate-100">
+          <span>{hasReactions && `${reactionTypes.slice(0, 3).map((t) => REACTIONS[t].emoji).join('')} ${post.reactions.length}`}</span>
+          <span className="text-right">
+            {post.commentsCount > 0 && (
+              <button onClick={() => setShowComments(!showComments)} className="hover:underline">
+                {post.commentsCount} bình luận
+              </button>
+            )}
+            {post.commentsCount > 0 && post.sharesCount > 0 && ' · '}
+            {post.sharesCount > 0 && `${post.sharesCount} lượt chia sẻ`}
+          </span>
         </div>
       )}
 
-      {/* ----- Số cảm xúc, bình luận, chia sẻ ----- */}
-      <div className="px-5 py-2.5 flex items-center justify-between text-xs text-slate-500 border-b border-slate-100">
-        <span>
-          {reactionTypes.slice(0, 3).map((t) => REACTIONS[t].emoji)} {post.reactions.length} lượt thích
-        </span>
-        <span>
-          <button onClick={() => setShowComments(!showComments)} className="hover:underline">
-            {post.commentsCount} bình luận
-          </button>
-          {' · '}
-          {post.sharesCount} lượt chia sẻ
-        </span>
-      </div>
-
       {/* ----- Hàng nút ----- */}
-      <div className="px-2 py-1 flex text-slate-600 font-semibold text-sm">
+      <div className={`px-2 py-1 flex text-slate-600 font-semibold text-xs sm:text-sm ${hasStats ? '' : 'border-t border-slate-100'}`}>
         <div
           className="flex-1 relative"
+          ref={menu === 'reactions' ? menuRef : undefined}
           onMouseEnter={() => (hoverTimer.current = setTimeout(() => setMenu('reactions'), 300))}
           onMouseLeave={() => {
             clearTimeout(hoverTimer.current);
@@ -174,40 +206,62 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           }}
         >
           {menu === 'reactions' && (
-            <div className="absolute -top-12 left-2 bg-white rounded-full px-2.5 py-1.5 shadow-2xl border border-slate-200 flex gap-2 z-40">
+            <div className="animate-pop absolute -top-12 left-2 bg-white rounded-full px-2.5 py-1.5 shadow-2xl border border-slate-200 flex gap-2 z-40">
               {(Object.keys(REACTIONS) as ReactionType[]).map((type) => (
-                <button key={type} title={REACTIONS[type].label} onClick={run(() => toggleReaction(post.id, type))} className="text-xl hover:scale-125 transition-transform">
+                <button key={type} title={REACTIONS[type].label} aria-label={REACTIONS[type].label} onClick={run(() => toggleReaction(post.id, type))} className="text-xl hover:scale-125 transition-transform">
                   {REACTIONS[type].emoji}
                 </button>
               ))}
             </div>
           )}
-          {/* Bấm nhanh: đã thả cảm xúc thì bấm lại = bỏ (server xử lý), chưa thả thì thả "like" */}
+          {/* Bấm nhanh: đã thả cảm xúc thì bấm lại = bỏ (server xử lý), chưa thả thì thả "like". Nhấn giữ (cảm ứng) = mở bảng cảm xúc */}
           <button
-            onClick={() => toggleReaction(post.id, myReaction?.type || 'like')}
-            className={`w-full py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100 ${myReaction ? REACTIONS[myReaction.type].color : ''}`}
+            onClick={() => {
+              if (longPress.current) {
+                longPress.current = false;
+                return;
+              }
+              toggleReaction(post.id, myReaction?.type || 'like');
+            }}
+            onTouchStart={() => {
+              longPress.current = false;
+              hoverTimer.current = setTimeout(() => {
+                longPress.current = true;
+                setMenu('reactions');
+              }, 400);
+            }}
+            onTouchEnd={() => clearTimeout(hoverTimer.current)}
+            onTouchMove={() => clearTimeout(hoverTimer.current)}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-full py-2 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-slate-100 select-none ${myReaction ? REACTIONS[myReaction.type].color : ''}`}
           >
             {myReaction ? `${REACTIONS[myReaction.type].emoji} ${REACTIONS[myReaction.type].label}` : <><ThumbsUp className="w-4 h-4" /> Thích</>}
           </button>
         </div>
 
-        <button onClick={() => setShowComments(!showComments)} className="flex-1 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100">
+        <button onClick={() => setShowComments(!showComments)} aria-expanded={showComments} className="flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-slate-100">
           <MessageCircle className="w-4 h-4" /> Bình luận
         </button>
 
         <div className="relative flex-1" ref={menu === 'share' ? menuRef : undefined}>
-          <button onClick={() => setMenu(menu === 'share' ? null : 'share')} className="w-full py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100">
+          <button onClick={() => setMenu(menu === 'share' ? null : 'share')} className="w-full py-2 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-slate-100">
             <Share2 className="w-4 h-4" /> Chia sẻ
           </button>
           {menu === 'share' && (
-            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20 text-xs">
+            <div className="animate-pop absolute bottom-full mb-1 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20 text-xs">
               <MenuItem icon={Share2} label="Chia sẻ lên trang cá nhân" onClick={run(() => sharePost(post.id))} />
               <MenuItem icon={MessageCircle} label="Gửi qua tin nhắn" onClick={run(() => setShowSendToFriend(true))} />
             </div>
           )}
         </div>
 
-        <button onClick={() => toggleSavePost(post.id)} title="Lưu" className={`px-3 py-2 rounded-xl hover:bg-slate-100 ${post.isSaved ? 'text-amber-500' : ''}`}>
+        <button
+          onClick={() => toggleSavePost(post.id)}
+          title={post.isSaved ? 'Bỏ lưu' : 'Lưu bài viết'}
+          aria-label={post.isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'}
+          aria-pressed={!!post.isSaved}
+          className={`px-3 py-2 rounded-xl hover:bg-slate-100 ${post.isSaved ? 'text-amber-500' : ''}`}
+        >
           <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-current' : ''}`} />
         </button>
       </div>
@@ -219,21 +273,32 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {showSendToFriend && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowSendToFriend(false)}>
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-slate-800 text-sm mb-3">Gửi bài viết cho bạn bè</h3>
-            {friends.map((f) => (
-              <button key={f.id} onClick={() => sendToFriend(f.id)} className="w-full flex items-center gap-3 p-2.5 hover:bg-blue-50 rounded-xl text-left">
-                <img src={f.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
-                <span className="text-xs font-semibold text-slate-700">{f.name}</span>
+          <div role="dialog" aria-modal="true" aria-label="Gửi bài viết cho bạn bè" className="animate-pop bg-white rounded-2xl max-w-sm w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-slate-800 text-sm">Gửi bài viết cho bạn bè</h3>
+              <button onClick={() => setShowSendToFriend(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+                <X className="w-5 h-5" />
               </button>
-            ))}
+            </div>
+            <div className="overflow-y-auto -mx-1 px-1">
+              {friends.length === 0 && <p className="py-6 text-center text-xs text-slate-400">Bạn chưa có bạn bè nào để gửi.</p>}
+              {friends.map((f) => (
+                <button key={f.id} onClick={() => sendToFriend(f.id)} className="w-full flex items-center gap-3 p-2.5 hover:bg-blue-50 rounded-xl text-left">
+                  <img src={f.avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                  <span className="text-xs font-semibold text-slate-700 truncate">{f.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {previewImage && (
-        <div onClick={() => setPreviewImage(null)} className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer">
-          <img src={previewImage} alt="" className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl" />
+        <div onClick={() => setPreviewImage(null)} className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out">
+          <button onClick={() => setPreviewImage(null)} aria-label="Đóng ảnh" className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white">
+            <X className="w-6 h-6" />
+          </button>
+          <img src={previewImage} alt="" className="max-h-[90dvh] max-w-[95vw] object-contain rounded-xl" />
         </div>
       )}
     </article>

@@ -4,7 +4,8 @@ import { useSocial } from '../../context/SocialContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChatWindows } from '../../context/ChatWindowsContext';
 import { timeAgo } from '../../utils/format';
-import { Avatar } from '../ui';
+import { Avatar, CountBadge } from '../ui';
+import { DROPDOWN } from '../../layout/dropdown';
 import { FriendPicker, toggleId } from '../FriendPicker';
 
 // Menu "Đoạn chat" thả xuống từ nút tin nhắn trên Navbar: tìm hội thoại, bấm vào để mở cửa sổ chat,
@@ -43,11 +44,11 @@ export const ChatListDropdown: React.FC<{ onClose: () => void }> = ({ onClose })
     .filter((r) => r.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50">
+    <div className={`${DROPDOWN} sm:w-96`}>
       <div className="px-4 py-2 flex items-center justify-between">
         <h3 className="font-bold text-slate-800">Đoạn chat</h3>
-        <button onClick={() => setCreating(!creating)} title="Tin nhắn mới" className="p-1.5 rounded-full bg-blue-600 text-white">
-          <Plus className="w-3.5 h-3.5" />
+        <button onClick={() => setCreating(!creating)} title={creating ? 'Quay lại' : 'Tin nhắn mới'} aria-label={creating ? 'Quay lại danh sách' : 'Tin nhắn mới'} className="p-1.5 rounded-full bg-blue-600 text-white">
+          <Plus className={`w-4 h-4 transition-transform ${creating ? 'rotate-45' : ''}`} />
         </button>
       </div>
 
@@ -62,19 +63,21 @@ export const ChatListDropdown: React.FC<{ onClose: () => void }> = ({ onClose })
         </div>
       ) : (
         <>
-          <div className="px-3 pb-2 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-6 top-2" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm kiếm cuộc trò chuyện" className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 rounded-full focus:outline-none" />
+          <div className="px-3 pb-2">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm kiếm cuộc trò chuyện" className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+            </div>
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[28rem] overflow-y-auto">
             {rows.length === 0 && <p className="p-6 text-center text-slate-400 text-sm">Không tìm thấy cuộc trò chuyện nào</p>}
             {rows.map(({ c, other, title, avatar }) => (
-              <div key={c.id} onClick={() => open(c.id)} className={`px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer ${c.unreadCount > 0 ? 'bg-blue-50/50' : ''}`}>
+              <button key={c.id} onClick={() => open(c.id)} className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-50 ${c.unreadCount > 0 ? 'bg-blue-50/50' : ''}`}>
                 <Avatar src={avatar} size="w-11 h-11" online={!c.isGroup && other?.isOnline} />
                 <div className="flex-1 min-w-0 text-xs">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-2">
                     <b className="truncate text-slate-800">{title}</b>
-                    <span className="text-[10px] text-slate-400">{timeAgo(c.lastMessage?.createdAt || c.updatedAt)}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">{timeAgo(c.lastMessage?.createdAt || c.updatedAt)}</span>
                   </div>
                   <p className={`truncate ${c.unreadCount > 0 ? 'text-slate-800 font-semibold' : 'text-slate-400'}`}>
                     {c.lastMessage
@@ -82,7 +85,8 @@ export const ChatListDropdown: React.FC<{ onClose: () => void }> = ({ onClose })
                       : 'Bắt đầu cuộc trò chuyện'}
                   </p>
                 </div>
-              </div>
+                <CountBadge count={c.unreadCount} className="shrink-0" />
+              </button>
             ))}
           </div>
         </>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Image as ImageIcon, Type, Loader2 } from 'lucide-react';
 import { useSocial } from '../../context/SocialContext';
 import { useFileUpload } from '../../hooks/useFileUpload';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 // Hộp thoại tạo story: dạng chữ trên nền màu hoặc dạng ảnh, chọn công khai / chỉ bạn bè, có khung xem trước.
 
@@ -23,7 +24,9 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
   const [privacy, setPrivacy] = useState<'public' | 'friends'>('public');
   const upload = useFileUpload((files) => setImageUrl(files[0].url));
 
-  const canSubmit = type === 'text' ? !!text.trim() : !!imageUrl;
+  useEscapeKey(onClose);
+
+  const canSubmit = type === 'text' ? !!text.trim() : !!imageUrl && !upload.isUploading;
 
   const handleSubmit = () => {
     createStory(type === 'text' ? { type, textContent: text.trim(), backgroundGradient: gradient, privacy } : { type, mediaUrl: imageUrl, privacy });
@@ -33,11 +36,11 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
   const choice = (active: boolean) => `flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-end sm:items-center justify-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="Tạo tin mới" className="animate-pop bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[94dvh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-800">Tạo tin / Story mới</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+          <button aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -52,9 +55,9 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
         </div>
 
         {/* Khung xem trước */}
-        <div className={`mx-auto w-56 h-72 rounded-2xl flex items-center justify-center text-center text-white p-5 overflow-hidden ${type === 'text' ? `bg-gradient-to-br ${gradient}` : 'bg-slate-900'}`}>
+        <div className={`mx-auto w-48 h-64 sm:w-56 sm:h-72 rounded-2xl flex items-center justify-center text-center text-white p-5 overflow-hidden ${type === 'text' ? `bg-gradient-to-br ${gradient}` : 'bg-slate-900'}`}>
           {type === 'text' ? (
-            <p className="font-bold">{text || 'Nội dung tin của bạn...'}</p>
+            <p className="font-bold break-words max-w-full">{text || 'Nội dung tin của bạn...'}</p>
           ) : imageUrl ? (
             <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-xl" />
           ) : (
@@ -64,10 +67,10 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
 
         {type === 'text' ? (
           <>
-            <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Gõ suy nghĩ của bạn..." className="input resize-none" />
-            <div className="flex gap-2 justify-center">
+            <textarea rows={2} maxLength={200} value={text} onChange={(e) => setText(e.target.value)} placeholder="Gõ suy nghĩ của bạn..." className="input resize-none" />
+            <div className="flex gap-2 justify-center flex-wrap">
               {GRADIENTS.map((g) => (
-                <button key={g} onClick={() => setGradient(g)} className={`w-8 h-8 rounded-full bg-gradient-to-br ${g} ${gradient === g ? 'ring-2 ring-indigo-600 ring-offset-2' : ''}`} />
+                <button key={g} type="button" aria-label="Chọn màu nền" onClick={() => setGradient(g)} className={`w-8 h-8 rounded-full bg-gradient-to-br ${g} ${gradient === g ? 'ring-2 ring-indigo-600 ring-offset-2' : ''}`} />
               ))}
             </div>
           </>

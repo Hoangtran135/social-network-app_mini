@@ -49,10 +49,10 @@ export const CommentSection: React.FC<{ postId: string }> = ({ postId }) => {
   };
 
   return (
-    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 space-y-3 rounded-b-2xl">
+    <div className="px-3 sm:px-5 py-3 bg-slate-50 border-t border-slate-100 space-y-3 rounded-b-2xl">
       <form onSubmit={handleSubmit} className="flex items-start gap-2.5">
-        <img src={currentUser?.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-        <div className="flex-1 bg-white rounded-2xl border border-slate-200 p-2">
+        <img src={currentUser?.avatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+        <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-200 p-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
           <div className="relative">
             <textarea
               ref={mention.textareaRef}
@@ -67,7 +67,7 @@ export const CommentSection: React.FC<{ postId: string }> = ({ postId }) => {
           {image && (
             <div className="relative inline-block mt-2">
               <img src={image} alt="" className="h-16 rounded-lg" />
-              <button type="button" onClick={() => setImage('')} className="absolute top-1 right-1 p-0.5 bg-slate-900/80 text-white rounded-full">
+              <button type="button" aria-label="Bỏ ảnh" onClick={() => setImage('')} className="absolute top-1 right-1 p-1 bg-slate-900/80 text-white rounded-full">
                 <Trash2 className="w-3 h-3" />
               </button>
             </div>
@@ -77,14 +77,14 @@ export const CommentSection: React.FC<{ postId: string }> = ({ postId }) => {
           <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-1 text-slate-400">
             <div className="flex gap-1">
               <input ref={imageUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={imageUpload.onChange} />
-              <button type="button" title="Đính kèm ảnh" onClick={imageUpload.open} className="p-1 rounded-md hover:text-emerald-600">
+              <button type="button" title="Đính kèm ảnh" aria-label="Đính kèm ảnh" onClick={imageUpload.open} className="p-1.5 rounded-md hover:text-emerald-600 hover:bg-slate-50">
                 {imageUpload.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
               </button>
-              <button type="button" title="Gắn thẻ bạn bè" onClick={() => setShowTagPicker(!showTagPicker)} className="p-1 rounded-md hover:text-blue-600">
+              <button type="button" title="Gắn thẻ bạn bè" aria-label="Gắn thẻ bạn bè" onClick={() => setShowTagPicker(!showTagPicker)} className={`p-1.5 rounded-md hover:text-blue-600 hover:bg-slate-50 ${showTagPicker ? 'text-blue-600' : ''}`}>
                 <UserPlus className="w-4 h-4" />
               </button>
             </div>
-            <button type="submit" disabled={!text.trim() && !image} className="p-1.5 rounded-full bg-blue-600 text-white disabled:opacity-40">
+            <button type="submit" aria-label="Gửi bình luận" disabled={(!text.trim() && !image) || imageUpload.isUploading} className="p-2 rounded-full bg-blue-600 text-white disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -96,6 +96,7 @@ export const CommentSection: React.FC<{ postId: string }> = ({ postId }) => {
         </div>
       </form>
 
+      {topLevel.length === 0 && <p className="text-center text-xs text-slate-400 py-2">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</p>}
       {topLevel.map((c) => (
         <CommentItem key={c.id} comment={c} postId={postId}>
           {repliesOf(c.id).map((r) => (
@@ -128,19 +129,19 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; children?: React
   return (
     <div className="flex items-start gap-2.5">
       <Link to={`/profile/${c.author.id}`}>
-        <img src={c.author.avatar} alt="" className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full object-cover`} />
+        <img src={c.author.avatar} alt="" className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full object-cover shrink-0`} />
       </Link>
       <div className="flex-1 min-w-0">
         <div className="bg-white rounded-2xl p-2.5 border border-slate-200 inline-block max-w-full text-xs">
           <Link to={`/profile/${c.author.id}`} className="font-bold text-slate-900 hover:underline">
             {c.author.name}
           </Link>
-          <p className="text-slate-800 mt-0.5">{c.content}</p>
+          <p className="text-slate-800 mt-0.5 whitespace-pre-line break-words">{c.content}</p>
           {!!c.taggedUsers?.length && <p className="text-[11px] text-slate-500 mt-1">cùng với <UserLinks users={c.taggedUsers} /></p>}
           {c.image && <img src={c.image} alt="" className="mt-2 rounded-lg max-h-40" />}
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-500 mt-1 pl-2">
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-500 mt-1 pl-2">
           <span>{timeAgo(c.createdAt)}</span>
           <button onClick={() => toggleLikeComment(postId, c.id)} className={liked ? 'text-blue-600' : 'hover:underline'}>
             Thích {c.likes.length > 0 && `(${c.likes.length})`}
@@ -159,8 +160,8 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; children?: React
 
         {replying && (
           <form onSubmit={sendReply} className="flex items-center gap-2 mt-2 pl-2">
-            <input autoFocus value={reply} onChange={(e) => setReply(e.target.value)} placeholder={`Trả lời ${c.author.name}...`} className="flex-1 text-xs bg-white border border-slate-200 rounded-full px-3 py-1.5" />
-            <button type="submit" disabled={!reply.trim()} className="p-1.5 rounded-full bg-blue-600 text-white disabled:opacity-40">
+            <input autoFocus value={reply} onChange={(e) => setReply(e.target.value)} placeholder={`Trả lời ${c.author.name}...`} className="flex-1 min-w-0 text-xs bg-white border border-slate-200 rounded-full px-3.5 py-2 focus:outline-none focus:border-blue-400" />
+            <button type="submit" aria-label="Gửi trả lời" disabled={!reply.trim()} className="p-2 rounded-full bg-blue-600 text-white disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>

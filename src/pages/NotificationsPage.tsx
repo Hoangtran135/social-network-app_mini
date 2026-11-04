@@ -35,7 +35,7 @@ export const NotificationsPage: React.FC = () => {
         )}
       </PageHeader>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto">
+      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
         {FILTERS.map((f) => (
           <TabButton key={f.key} active={filter.key === f.key} onClick={() => setFilter(f)}>
             {f.label}
@@ -44,23 +44,23 @@ export const NotificationsPage: React.FC = () => {
       </div>
 
       {shown.length === 0 ? (
-        <EmptyState icon={Sparkles} title="Không có thông báo nào" />
+        <EmptyState icon={Sparkles} title={filter.key === 'all' ? 'Chưa có thông báo nào' : 'Không có thông báo phù hợp'} description={filter.key === 'all' ? 'Khi có người tương tác với bạn, thông báo sẽ hiện ở đây.' : 'Thử chọn bộ lọc khác để xem thêm.'} />
       ) : (
         <div className="card rounded-3xl overflow-hidden divide-y divide-slate-100">
           {shown.map((n) => (
-            <div key={n.id} onClick={() => openNotification(n)} className={`p-4 flex items-start gap-3.5 hover:bg-slate-50 cursor-pointer ${n.isRead ? '' : 'bg-blue-50/40'}`}>
-              <div className="relative">
-                <img src={n.actor.avatar} alt="" className="w-12 h-12 rounded-2xl object-cover" />
+            <button key={n.id} onClick={() => openNotification(n)} className={`w-full text-left p-3.5 sm:p-4 flex items-start gap-3.5 hover:bg-slate-50 ${n.isRead ? '' : 'bg-blue-50/40'}`}>
+              <div className="relative shrink-0">
+                <img src={n.actor.avatar} alt="" loading="lazy" className="w-12 h-12 rounded-2xl object-cover" />
                 <span className="absolute -bottom-1 -right-1 text-sm">{TYPE_ICONS[n.type]}</span>
               </div>
-              <div className="flex-1 text-sm">
-                <p className="text-slate-800">
+              <div className="flex-1 min-w-0 text-sm">
+                <p className="text-slate-800 break-words">
                   <b>{n.actor.name}</b> {n.content}
                 </p>
-                <span className="text-[11px] text-slate-400">{timeAgo(n.createdAt)}</span>
+                <span className={`text-[11px] ${n.isRead ? 'text-slate-400' : 'text-blue-600 font-semibold'}`}>{timeAgo(n.createdAt)}</span>
               </div>
-              {!n.isRead && <span className="w-2.5 h-2.5 rounded-full bg-blue-600 mt-2" />}
-            </div>
+              {!n.isRead && <span aria-label="Chưa đọc" className="w-2.5 h-2.5 rounded-full bg-blue-600 mt-2 shrink-0" />}
+            </button>
           ))}
         </div>
       )}

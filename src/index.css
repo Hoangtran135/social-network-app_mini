@@ -5,6 +5,36 @@
     @apply bg-slate-100 text-slate-900 antialiased selection:bg-blue-500 selection:text-white;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+
+  /* Tailwind 4 đặt con trỏ mặc định cho nút → trả lại con trỏ "bàn tay" cho mọi phần tử bấm được */
+  button:not(:disabled),
+  [role="button"],
+  summary,
+  select {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Viền focus rõ ràng khi điều hướng bằng bàn phím (ô nhập đã có viền focus riêng) */
+  :focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
+
+  /* Ô nhập trên điện thoại cỡ chữ 16px để iOS không tự phóng to trang khi chạm vào */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
 }
 
 /* Semantic component classes — short names in JSX, real Tailwind utilities underneath. */
@@ -17,10 +47,10 @@
   }
 
   .btn-primary {
-    @apply px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-colors;
+    @apply px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-bold shadow-md shadow-blue-500/20 transition-colors disabled:opacity-50 disabled:shadow-none;
   }
   .btn-secondary {
-    @apply px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors;
+    @apply px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[13px] font-bold transition-colors disabled:opacity-50;
   }
   .btn-tab {
     @apply px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:bg-slate-100;
@@ -30,7 +60,7 @@
   }
 
   .input {
-    @apply w-full text-xs p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 transition-all;
+    @apply w-full text-sm p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:bg-slate-100 disabled:cursor-not-allowed;
   }
 
   .empty-icon {
@@ -64,4 +94,29 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Hiệu ứng mở hộp thoại / menu */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: pop-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

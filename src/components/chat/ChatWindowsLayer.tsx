@@ -2,7 +2,8 @@ import React from 'react';
 import { useChatWindows } from '../../context/ChatWindowsContext';
 import { ChatWindow } from './ChatWindow';
 
-// Vẽ các cửa sổ chat đang mở, xếp cạnh nhau từ phải sang trái ở góc dưới màn hình (ẩn trên điện thoại).
+// Vẽ các cửa sổ chat đang mở, xếp cạnh nhau từ phải sang trái ở góc dưới màn hình.
+// Trên điện thoại cửa sổ chat mở toàn màn hình (xem ChatWindow).
 
 const WIDTH = 330;
 const MINIMIZED_WIDTH = 280;
@@ -13,7 +14,7 @@ export const ChatWindowsLayer: React.FC = () => {
   let right = 16;
 
   return (
-    <div className="hidden sm:block">
+    <div>
       {windows.map((w) => {
         const position = right;
         right += (w.minimized ? MINIMIZED_WIDTH : WIDTH) + GAP;

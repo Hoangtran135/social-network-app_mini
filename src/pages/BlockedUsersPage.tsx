@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { User } from '../types';
 import { api } from '../utils/api';
-import { PageHeader, EmptyState } from '../components/ui';
+import { PageHeader, EmptyState, PageLoading } from '../components/ui';
 
 // Trang danh sách chặn (/settings/blocked): xem những người mình đã chặn và bỏ chặn.
 // Khi chặn nhau, hai bên không xem được trang cá nhân, bài viết, không kết bạn hay nhắn tin được.
@@ -33,20 +33,21 @@ export const BlockedUsersPage: React.FC = () => {
         title="Danh sách chặn"
         subtitle={users ? `Bạn đang chặn ${users.length} người dùng` : 'Đang tải...'}
         before={
-          <Link to="/settings" title="Quay lại Cài đặt" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+          <Link to="/settings" title="Quay lại Cài đặt" aria-label="Quay lại Cài đặt" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
             <ArrowLeft className="w-5 h-5" />
           </Link>
         }
       />
-      {users?.length === 0 && <EmptyState icon={UserX} title="Bạn chưa chặn ai" />}
+      {users === null && <PageLoading />}
+      {users?.length === 0 && <EmptyState icon={UserX} title="Bạn chưa chặn ai" description="Người bị chặn sẽ không xem được trang cá nhân hay nhắn tin cho bạn." />}
       {!!users?.length && (
         <div className="card rounded-3xl p-4 divide-y divide-slate-100">
           {users.map((user) => (
             <div key={user.id} className="flex items-center gap-3 py-3">
-              <img src={user.avatar} alt="" className="w-12 h-12 rounded-full object-cover grayscale" />
-              <div className="flex-1 text-sm">
-                <b className="text-slate-800">{user.name}</b>
-                <div className="text-xs text-slate-400">@{user.username}</div>
+              <img src={user.avatar} alt="" className="w-12 h-12 rounded-full object-cover grayscale shrink-0" />
+              <div className="flex-1 min-w-0 text-sm">
+                <b className="text-slate-800 block truncate">{user.name}</b>
+                <div className="text-xs text-slate-400 truncate">@{user.username}</div>
               </div>
               <button onClick={() => unblock(user)} className="btn-secondary">
                 Bỏ chặn

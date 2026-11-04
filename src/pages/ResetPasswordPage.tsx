@@ -53,8 +53,8 @@ export const ResetPasswordPage: React.FC = () => {
         </p>
         <ErrorBox message={error} />
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FormField label="Mật khẩu mới" icon={Lock} type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-          <FormField label="Xác nhận mật khẩu" icon={Lock} type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <FormField label="Mật khẩu mới" icon={Lock} type="password" required minLength={6} autoFocus autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <FormField label="Xác nhận mật khẩu" icon={Lock} type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
           <SubmitButton loading={loading}>{loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}</SubmitButton>
         </form>
       </>

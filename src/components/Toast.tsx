@@ -4,6 +4,7 @@ import { useSocial } from '../context/SocialContext';
 
 // Thông báo nhỏ hiện vài giây ở góc màn hình (vd "Đã đăng bài viết!").
 // Nội dung lấy từ SocialContext; ở bất kỳ đâu gọi showToast('...') là hiện.
+// Trên điện thoại toast nằm phía trên thanh điều hướng dưới cùng; trên màn hình rộng nằm góc trái dưới (góc phải dành cho cửa sổ chat).
 
 const STYLES = {
   success: { color: 'bg-emerald-600', Icon: CheckCircle2 },
@@ -17,10 +18,10 @@ export const Toast: React.FC = () => {
   const { color, Icon } = STYLES[toast.type];
 
   return (
-    <div className="fixed bottom-6 right-6 left-4 sm:left-auto z-50">
-      <div className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium ${color}`}>
+    <div role={toast.type === 'error' ? 'alert' : 'status'} className="fixed bottom-20 sm:bottom-6 right-4 left-4 sm:right-auto sm:left-6 z-[70] pointer-events-none">
+      <div className={`animate-pop flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium sm:max-w-sm ${color}`}>
         <Icon className="w-5 h-5 shrink-0" />
-        <span>{toast.message}</span>
+        <span className="min-w-0 break-words">{toast.message}</span>
       </div>
     </div>
   );

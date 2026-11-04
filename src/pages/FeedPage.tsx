@@ -38,7 +38,7 @@ export const FeedPage: React.FC = () => {
       <StoryBar />
       <CreatePostBox onClick={openCreatePost} />
 
-      <div className="card p-2 mb-5 flex gap-1">
+      <div className="card p-2 mb-5 flex gap-1" role="group" aria-label="Lọc bài viết">
         <TabButton active={!onlyFriends} onClick={() => setOnlyFriends(false)}>
           Tất cả bài viết
         </TabButton>
@@ -47,8 +47,12 @@ export const FeedPage: React.FC = () => {
         </TabButton>
       </div>
 
-      {visiblePosts.length === 0 && (
-        <EmptyState icon={MessageSquareDashed} title="Chưa có bài viết nào" description="Hãy là người đầu tiên chia sẻ khoảnh khắc của bạn!">
+      {visiblePosts.length === 0 && !isLoadingMorePosts && (
+        <EmptyState
+          icon={MessageSquareDashed}
+          title="Chưa có bài viết nào"
+          description={onlyFriends ? 'Bạn bè của bạn chưa đăng bài nào. Hãy kết thêm bạn hoặc xem tất cả bài viết.' : 'Hãy là người đầu tiên chia sẻ khoảnh khắc của bạn!'}
+        >
           <button onClick={openCreatePost} className="btn-primary">
             + Đăng bài ngay
           </button>
@@ -59,7 +63,13 @@ export const FeedPage: React.FC = () => {
       ))}
 
       <div ref={endRef} />
-      {isLoadingMorePosts && <Loader2 className="w-5 h-5 animate-spin mx-auto my-6 text-slate-400" />}
+      {isLoadingMorePosts && <Loader2 className="w-5 h-5 animate-spin mx-auto my-6 text-slate-400" aria-label="Đang tải thêm" />}
+      {/* Bộ lọc "Bạn bè" có thể làm danh sách ngắn đến mức ô cuối không bao giờ tới gần màn hình → luôn có nút tải thêm dự phòng */}
+      {hasMorePosts && !isLoadingMorePosts && visiblePosts.length > 0 && (
+        <button onClick={loadMorePosts} className="btn-secondary mx-auto block mb-6">
+          Xem thêm bài viết
+        </button>
+      )}
       {!hasMorePosts && visiblePosts.length > 0 && <p className="text-center text-xs text-slate-400 py-6">Bạn đã xem hết bài viết.</p>}
     </div>
   );
