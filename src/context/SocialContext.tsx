@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Post, Comment, Story, Conversation, Message, FriendRequest, NotificationItem, ReactionType, User, Privacy } from '../types';
 import { useAuth } from './AuthContext';
 import { api, ApiError } from '../utils/api';
@@ -29,6 +29,8 @@ function useSocialState() {
   const [sentFriendRequests, setSentFriendRequests] = useState<FriendRequest[]>([]); // lời mời mình đã gửi
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({}); // { conversationId: [tin nhắn] }
+  const conversationsRef = useRef(conversations); // bản mới nhất của danh sách hội thoại, để trình nghe socket không đọc phải bản cũ
+  conversationsRef.current = conversations;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -124,6 +126,10 @@ function useSocialState() {
           return { ...prev, [conversationId]: exists ? list.map((m) => (m.id === message.id ? message : m)) : [...list, message] };
         });
         const fromOther = message.senderId !== myId;
+        // Người chưa từng nhắn (vd người lạ chưa kết bạn) gửi tin đầu tiên → hội thoại chưa có trong danh sách → tải lại danh sách
+        if (!conversationsRef.current.some((c) => c.id === conversationId)) {
+          api.get<{ conversations: Conversation[] }>('/messages/conversations').then((d) => setConversations(d.conversations)).catch(() => {});
+        }
         setConversations((list) =>
           list.map((c) =>
             c.id === conversationId
