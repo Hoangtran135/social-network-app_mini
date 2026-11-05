@@ -24,6 +24,7 @@ const loadEmail = async () => (await import('../../server/email')).sendPasswordR
 describe('sendPasswordResetEmail', () => {
   it('chưa cấu hình SMTP (môi trường phát triển) → in link ra console, không gửi mail', async () => {
     SMTP_KEYS.forEach((k) => delete process.env[k]);
+    process.env.NODE_ENV = 'development'; // trong môi trường test email giả im lặng; ở môi trường phát triển thì in link ra terminal
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const send = await loadEmail();
     await expect(send('a@b.vn', 'https://x/reset?token=abc')).resolves.toBeUndefined();
@@ -78,6 +79,40 @@ describe('sendPasswordResetEmail', () => {
     sendMail.mockRejectedValueOnce(new Error('kết nối bị từ chối'));
     const send = await loadEmail();
     await expect(send('a@b.vn', 'https://x')).rejects.toThrow('kết nối bị từ chối');
+  });
+});
+
+describe('sendVerificationEmail', () => {
+  const loadVerify = async () => (await import('../../server/email')).sendVerificationEmail;
+
+  it('chưa cấu hình SMTP (phát triển) → in link ra console', async () => {
+    SMTP_KEYS.forEach((k) => delete process.env[k]);
+    process.env.NODE_ENV = 'development';
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await (await loadVerify())('a@b.vn', 'https://x/verify-email?token=t');
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('link xác minh email cho a@b.vn: https://x/verify-email?token=t'));
+  });
+
+  it('môi trường test → im lặng (không in link)', async () => {
+    SMTP_KEYS.forEach((k) => delete process.env[k]);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await (await loadVerify())('a@b.vn', 'https://x');
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it('production chưa có SMTP → báo lỗi', async () => {
+    SMTP_KEYS.forEach((k) => delete process.env[k]);
+    process.env.NODE_ENV = 'production';
+    await expect((await loadVerify())('a@b.vn', 'https://x')).rejects.toThrow('SMTP is not configured');
+  });
+
+  it('có SMTP → gửi mail xác minh có link và hạn 24 giờ', async () => {
+    Object.assign(process.env, { SMTP_HOST: 'smtp.test', SMTP_FROM: 'App <no-reply@test.vn>' });
+    await (await loadVerify())('moi@test.vn', 'https://app/verify-email?token=abc');
+    const mail = sendMail.mock.calls[0][0];
+    expect(mail).toMatchObject({ to: 'moi@test.vn', from: 'App <no-reply@test.vn>', subject: 'Xác minh email SocialNet' });
+    expect(mail.html).toContain('https://app/verify-email?token=abc');
+    expect(mail.html).toContain('24 giờ');
   });
 });
 

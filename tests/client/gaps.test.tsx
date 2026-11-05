@@ -147,7 +147,7 @@ describe('Bình luận / bài viết — nhánh hiếm', () => {
     const { user } = renderApp('/', { seed: () => void (db.comments[0].likes = ['u1']) });
     await feedLoaded();
     await user.click(within(post('p2')).getByRole('button', { name: 'Bình luận' }));
-    const liked = await within(post('p2')).findByRole('button', { name: 'Thích (1)' });
+    const liked = await within(post('p2')).findByRole('button', { name: '👍 Thích' });
     expect(liked.className).toContain('text-blue-600');
   });
 

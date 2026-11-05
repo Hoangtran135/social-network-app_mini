@@ -435,11 +435,11 @@ describe('Story — xem', () => {
     expect(screen.queryByRole('dialog', { name: 'Xem tin' })).toBeNull();
   });
 
-  it('thả cảm xúc nhanh → gửi tin nhắn cho người đăng + toast', async () => {
+  it('thả cảm xúc nhanh → lưu cảm xúc lên story + toast', async () => {
     const { user, dialog } = await openStory();
     await user.click(within(dialog).getByRole('button', { name: 'Phản hồi ❤️' }));
-    expect(await screen.findByText('Đã gửi tới Bạn Một')).toBeTruthy();
-    expect(calls.some((c) => c.method === 'POST' && c.path === '/messages/conversations/cv1/messages' && JSON.stringify(c.body).includes('❤️'))).toBe(true);
+    expect(await screen.findByText('Đã gửi cảm xúc ❤️ tới Bạn Một')).toBeTruthy();
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/stories/st1/react')?.body).toEqual({ emoji: '❤️' });
   });
 
   it('trả lời story bằng chữ; ô trống thì không gửi', async () => {

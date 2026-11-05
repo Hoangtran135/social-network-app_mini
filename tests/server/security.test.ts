@@ -163,6 +163,17 @@ describe('Tình huống đồng thời (race condition)', () => {
     expect(new Set(reactions.map((r) => r.userId)).size).toBe(6);
   });
 
+  it('lặp lại 8 lần: một người bấm 6 loại cảm xúc bài viết song song → luôn ≤ 1 cảm xúc', async () => {
+    const a = await signUp(app);
+    const b = await signUp(app);
+    for (let round = 0; round < 8; round++) {
+      const post = await createPost(app, a);
+      await Promise.all(['like', 'love', 'haha', 'wow', 'sad', 'angry', 'like', 'love'].map((type) => as(app, b).post(`/api/posts/${post.id}/react`).send({ type })));
+      const reactions = (await as(app, a).get(`/api/posts/${post.id}`)).body.post.reactions as unknown[];
+      expect(reactions.length, `vòng ${round}`).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('cùng một người bấm Thích nhiều lần liên tiếp rất nhanh → không bao giờ có hơn 1 cảm xúc', async () => {
     const a = await signUp(app);
     const b = await signUp(app);

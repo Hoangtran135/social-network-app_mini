@@ -341,9 +341,10 @@ describe('Thẻ bài viết — bình luận', () => {
     await card.findByText('Bình luận đầu tiên');
     // [0] = nút Thích của bài viết, [1] = nút Thích của bình luận
     await user.click(card.getAllByRole('button', { name: 'Thích' })[1]);
-    expect(await card.findByRole('button', { name: 'Thích (1)' })).toBeTruthy();
-    await user.click(card.getByRole('button', { name: 'Thích (1)' }));
-    await waitFor(() => expect(card.getAllByRole('button', { name: 'Thích' })).toHaveLength(2));
+    expect(await card.findByTitle('1 cảm xúc')).toBeTruthy();
+    await user.click(card.getByRole('button', { name: '👍 Thích' }));
+    await waitFor(() => expect(card.queryByTitle('1 cảm xúc')).toBeNull());
+    expect(card.getAllByRole('button', { name: 'Thích' })).toHaveLength(2);
   });
 
   it('xoá bình luận của mình có xác nhận; bình luận của người khác không có nút Xóa', async () => {
@@ -490,6 +491,7 @@ describe('Thẻ bài viết — menu "..." và chia sẻ', () => {
     await feedLoaded();
     await user.click(within(post('p1')).getByRole('button', { name: 'Chia sẻ' }));
     await user.click(within(post('p1')).getByText('Chia sẻ lên trang cá nhân'));
+    await user.click(within(screen.getByRole('dialog', { name: 'Chia sẻ bài viết' })).getByRole('button', { name: 'Chia sẻ ngay' }));
     expect(await screen.findByText(/\[Chia sẻ\]: Bài của bạn một/)).toBeTruthy();
     expect(screen.getByText('Đã chia sẻ bài viết lên trang cá nhân của bạn!')).toBeTruthy();
     expect(within(post('p1')).getByText('1 lượt chia sẻ')).toBeTruthy();

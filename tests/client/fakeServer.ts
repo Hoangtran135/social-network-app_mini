@@ -24,16 +24,19 @@ export const makeUser = (id: string, name: string, extra: Partial<User> = {}): U
 interface Db {
   me: User; users: User[]; friends: string[]; posts: Post[]; comments: Comment[]; stories: Story[];
   requestsIn: FriendRequest[]; requestsOut: FriendRequest[]; conversations: Conversation[]; messages: Record<string, Message[]>;
-  notifications: NotificationItem[]; memories: Post[]; blocked: string[]; passwords: Record<string, string>; failNext: Set<string>;
+  notifications: NotificationItem[]; memories: Post[]; blocked: string[]; hidden: string[]; following: string[]; passwords: Record<string, string>; failNext: Set<string>;
 }
 
 export const calls: { method: string; path: string; body?: unknown }[] = [];
+/** Các sự kiện socket mà trình duyệt GỬI LÊN server (typing, message:delivered...). */
+export const emitted: { event: string; payload: unknown }[] = [];
 export const db = {} as Db;
 
 /** Dựng lại dữ liệu mặc định: tôi (u1) có 2 bạn (f1 online, f2), 1 người lạ (s1), 1 lời mời đến (s2), 1 lời mời đi (s3), vài bài viết. */
 export function resetDb() {
   seq = 1000;
   calls.length = 0;
+  emitted.length = 0;
   const me = makeUser('u1', 'Trần Xuân Hoàng', { bio: 'Sinh viên', workplace: 'FPT', education: 'Bách Khoa', location: 'Hà Nội', website: 'example.com' });
   const f1 = makeUser('f1', 'Bạn Một', { isOnline: true, location: 'Đà Nẵng' });
   const f2 = makeUser('f2', 'Bạn Hai');
@@ -72,6 +75,8 @@ export function resetDb() {
     ],
     memories: [post('mem1', me, 'Kỷ niệm năm ngoái', { createdAt: new Date(Date.now() - 365 * 86400000).toISOString() })],
     blocked: [],
+    hidden: [],
+    following: [],
     passwords: { 'u1@test.vn': 'secret123' },
     failNext: new Set<string>(),
   });
@@ -93,7 +98,10 @@ const routes: [string, RegExp, Handler][] = [];
 const route = (method: string, pattern: string, handler: Handler) => routes.push([method, new RegExp(`^${pattern}$`), handler]);
 
 // ---------- Tài khoản ----------
-route('GET', '/auth/me', () => ({ user: db.me }));
+route('GET', '/auth/me', () => {
+  if (!token) fail(401, 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.');
+  return { user: db.me };
+});
 route('POST', '/auth/login', (_m, b) => {
   const user = db.users.find((u) => u.email === String(b.email).toLowerCase());
   if (!user || db.passwords[user.email] !== b.password) fail(401, 'Email hoặc mật khẩu không chính xác.');
@@ -105,9 +113,15 @@ route('POST', '/auth/register', (_m, b) => {
   const user = makeUser(nextId('n'), b.name, { username: b.username, email: b.email });
   db.users.push(user);
   db.passwords[b.email] = b.password;
-  db.me = { ...user, blockedUserIds: [] };
+  db.me = { ...user, blockedUserIds: [], emailVerified: false }; // tài khoản mới chưa xác minh email
   return { token: 'token-' + user.id, user: db.me };
 });
+route('POST', '/auth/verify-email', (_m, b) => {
+  if (b.token !== 'good-token') fail(400, 'Liên kết xác minh không hợp lệ hoặc đã hết hạn.');
+  db.me = { ...db.me, emailVerified: true };
+  return { ok: true };
+});
+route('POST', '/auth/resend-verification', () => ({ ok: true }));
 route('POST', '/auth/logout', () => ({ ok: true }));
 route('POST', '/auth/forgot-password', () => ({ ok: true }));
 route('POST', '/auth/reset-password', (_m, b) => {
@@ -120,6 +134,20 @@ route('GET', '/users', (_m, _b, q) => {
   const term = (q.get('q') || '').toLowerCase();
   const users = db.users.filter((u) => !term || `${u.name} ${u.username}`.toLowerCase().includes(term)).slice(0, Number(q.get('limit')) || 60);
   return { users, total: users.length };
+});
+route('GET', '/users/me/following', () => ({ users: db.following.map(byId) }));
+route('GET', '/users/([^/]+)/follow-stats', (m) => ({
+  followersCount: 2 + (db.following.includes(m[1]) ? 1 : 0),
+  followingCount: m[1] === db.me.id ? db.following.length : 5,
+  isFollowing: db.following.includes(m[1]),
+}));
+route('POST', '/users/([^/]+)/follow', (m) => {
+  if (!db.following.includes(m[1])) db.following.push(m[1]);
+  return { ok: true, isFollowing: true, followersCount: 3 };
+});
+route('DELETE', '/users/([^/]+)/follow', (m) => {
+  db.following = db.following.filter((id) => id !== m[1]);
+  return { ok: true, isFollowing: false, followersCount: 2 };
 });
 route('GET', '/users/me/blocked', () => ({ users: db.users.filter((u) => db.blocked.includes(u.id)) }));
 route('GET', '/users/([^/]+)', (m) => {
@@ -155,7 +183,9 @@ const findPost = (id: string) => db.posts.find((p) => p.id === id) || fail(404, 
 route('GET', '/posts', (_m, _b, q) => {
   const skip = Number(q.get('skip')) || 0;
   const limit = Number(q.get('limit')) || 30;
-  return { posts: db.posts.filter((p) => !db.blocked.includes(p.author.id)).slice(skip, skip + limit).map(withSaved) };
+  const tag = q.get('tag')?.toLowerCase();
+  const list = db.posts.filter((p) => !db.blocked.includes(p.author.id) && !db.hidden.includes(p.id) && (!tag || (p.hashtags || []).includes(tag)));
+  return { posts: list.slice(skip, skip + limit).map(withSaved) };
 });
 route('GET', '/posts/memories', () => ({ posts: db.memories }));
 route('GET', '/posts/([^/]+)', (m) => ({ post: withSaved(findPost(m[1])) }));
@@ -164,6 +194,7 @@ route('POST', '/posts', (_m, b) => {
   const post: Post = {
     id: nextId('p'), author: db.me, content: b.content, images: b.images?.length ? b.images : undefined, video: b.video, privacy: b.privacy || 'public',
     feeling: b.feeling, createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0, isSaved: false, pinned: false,
+    location: b.location, hashtags: (String(b.content).match(/(?:^|\s)#([\p{L}\p{N}_]+)/gu) || []).map((t: string) => t.trim().slice(1).toLowerCase()), commentsDisabled: false,
     wallOwnerId: wall?.id, wallOwnerName: wall?.name, taggedUsers: (b.taggedUserIds || []).map(byId).filter(Boolean) as User[],
   };
   db.posts.unshift(post);
@@ -171,6 +202,7 @@ route('POST', '/posts', (_m, b) => {
 });
 route('PATCH', '/posts/([^/]+)', (m, b) => {
   const post = findPost(m[1]);
+  if (b.content !== undefined && b.content !== post.content) post.editHistory = [...(post.editHistory || []), { content: post.content, editedAt: iso(0) }];
   Object.assign(post, b, { updatedAt: iso(0) });
   return { post };
 });
@@ -190,15 +222,28 @@ route('POST', '/posts/([^/]+)/pin', (m) => {
   post.pinned = !post.pinned;
   return { post };
 });
+route('POST', '/posts/([^/]+)/toggle-comments', (m) => {
+  const post = findPost(m[1]);
+  post.commentsDisabled = !post.commentsDisabled;
+  return { post };
+});
+route('POST', '/posts/([^/]+)/hide', (m) => {
+  db.hidden.push(m[1]);
+  return { ok: true };
+});
+route('DELETE', '/posts/([^/]+)/hide', (m) => {
+  db.hidden = db.hidden.filter((id) => id !== m[1]);
+  return { ok: true };
+});
 route('POST', '/posts/([^/]+)/save', (m) => {
   const post = findPost(m[1]);
   post.isSaved = !post.isSaved;
   return { post };
 });
-route('POST', '/posts/([^/]+)/share', (m) => {
+route('POST', '/posts/([^/]+)/share', (m, b) => {
   const original = findPost(m[1]);
   original.sharesCount++;
-  const post: Post = { id: nextId('p'), author: db.me, content: `[Chia sẻ]: ${original.content}`, privacy: 'public', createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0 };
+  const post: Post = { id: nextId('p'), author: db.me, content: `${b.message ? `${b.message}\n\n` : ''}[Chia sẻ]: ${original.content}`, privacy: 'public', createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0 };
   db.posts.unshift(post);
   return { post };
 });
@@ -206,6 +251,7 @@ route('POST', '/posts/([^/]+)/share', (m) => {
 // ---------- Bình luận ----------
 route('GET', '/comments', (_m, _b, q) => ({ comments: db.comments.filter((c) => c.postId === q.get('postId')) }));
 route('POST', '/comments', (_m, b) => {
+  if (db.posts.find((p) => p.id === b.postId)?.commentsDisabled) fail(403, 'Chủ bài viết đã tắt bình luận.');
   const comment: Comment = { id: nextId('c'), postId: b.postId, author: db.me, content: b.content, image: b.image, createdAt: iso(0), likes: [], parentId: b.parentId, taggedUsers: (b.taggedUserIds || []).map(byId).filter(Boolean) as User[] };
   db.comments.push(comment);
   return { comment };
@@ -213,6 +259,25 @@ route('POST', '/comments', (_m, b) => {
 route('DELETE', '/comments/([^/]+)', (m) => {
   db.comments = db.comments.filter((c) => c.id !== m[1]);
   return { ok: true };
+});
+route('PATCH', '/comments/([^/]+)', (m, b) => {
+  const comment = db.comments.find((c) => c.id === m[1]) || fail(404, 'Không tìm thấy bình luận.');
+  comment.content = b.content;
+  comment.editedAt = iso(0);
+  return { comment };
+});
+route('POST', '/comments/([^/]+)/react', (m, b) => {
+  const comment = db.comments.find((c) => c.id === m[1]) || fail(404, 'Không tìm thấy bình luận.');
+  const me = db.me.id;
+  const all = comment.reactions ?? comment.likes.map((userId) => ({ type: 'like' as const, userId }));
+  const current = all.find((r) => r.userId === me)?.type;
+  comment.reactions = all.filter((r) => r.userId !== me);
+  comment.likes = comment.likes.filter((id) => id !== me);
+  if (current !== b.type) {
+    comment.reactions.push({ type: b.type, userId: me });
+    if (b.type === 'like') comment.likes.push(me);
+  }
+  return { comment };
 });
 route('POST', '/comments/([^/]+)/like', (m) => {
   const comment = db.comments.find((c) => c.id === m[1])!;
@@ -234,6 +299,14 @@ route('DELETE', '/stories/([^/]+)', (m) => {
 route('POST', '/stories/([^/]+)/view', (m) => {
   const story = db.stories.find((s) => s.id === m[1])!;
   if (story.user.id !== db.me.id && !story.viewers.some((v) => v.userId === db.me.id)) story.viewers.push({ userId: db.me.id, userName: db.me.name, avatar: db.me.avatar, viewedAt: iso(0) });
+  return { story };
+});
+
+route('POST', '/stories/([^/]+)/react', (m, b) => {
+  const story = db.stories.find((s) => s.id === m[1]) || fail(404, 'Không tìm thấy story.');
+  const mine = (story.reactions || []).find((r) => r.userId === db.me.id);
+  story.reactions = (story.reactions || []).filter((r) => r.userId !== db.me.id);
+  if (mine?.emoji !== b.emoji) story.reactions.push({ userId: db.me.id, userName: db.me.name, avatar: db.me.avatar, emoji: b.emoji });
   return { story };
 });
 
@@ -311,6 +384,10 @@ route('DELETE', '/messages/conversations/([^/]+)/messages/([^/]+)', (m) => {
   Object.assign(message, { isRecalled: true, content: '', attachments: undefined, reactions: undefined });
   return { message };
 });
+route('POST', '/messages/conversations/([^/]+)/messages/([^/]+)/delete-for-me', (m) => {
+  db.messages[m[1]] = (db.messages[m[1]] || []).filter((x) => x.id !== m[2]);
+  return { ok: true };
+});
 route('POST', '/messages/conversations/([^/]+)/messages/([^/]+)/react', (m, b) => {
   const message = db.messages[m[1]].find((x) => x.id === m[2])!;
   const reactions = { ...(message.reactions || {}) };
@@ -373,6 +450,7 @@ export const fakeSocket = {
   on: (event: string, fn: (payload: unknown) => void) => void (listeners.get(event) ?? listeners.set(event, new Set()).get(event)!).add(fn),
   off: (event: string, fn: (payload: unknown) => void) => void listeners.get(event)?.delete(fn),
   auth: {} as unknown,
+  emit: (event: string, payload?: unknown) => void emitted.push({ event, payload }),
 };
 export const socketModule = { getSocket: () => fakeSocket, disconnectSocket: () => {} };
 /** Giả lập server đẩy sự kiện realtime tới trình duyệt. Nhớ bọc trong act(). */

@@ -11,6 +11,7 @@ import { buildApp, connectTestDb, disconnectTestDb, signUp, as, bogusId } from '
 const sentEmails: { to: string; url: string }[] = [];
 vi.mock('../../server/email', () => ({
   sendPasswordResetEmail: async (to: string, url: string) => void sentEmails.push({ to, url }),
+  sendVerificationEmail: async () => {},
 }));
 
 let app: Express;
