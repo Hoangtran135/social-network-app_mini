@@ -10,16 +10,19 @@ export const CreatePostBox: React.FC<{ onClick: () => void; placeholder?: string
     <div className="card p-4 mb-5">
       <div className="flex items-center gap-3">
         <img src={currentUser?.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
-        <button onClick={onClick} className="flex-1 min-w-0 text-left px-4 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 text-sm truncate">
+        <button onClick={onClick} className="flex-1 min-w-0 text-left px-4 min-h-10 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 text-sm truncate transition-colors">
           {placeholder || `${currentUser?.name} ơi, bạn đang nghĩ gì thế?`}
         </button>
       </div>
       <div className="flex pt-3 mt-3 border-t border-slate-100 text-slate-600 text-xs sm:text-sm font-semibold">
-        <button onClick={onClick} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl hover:bg-slate-100">
+        <button onClick={onClick} className="flex-1 flex items-center justify-center gap-2 min-h-10 rounded-xl hover:bg-slate-100 transition-colors">
           <ImageIcon className="w-5 h-5 text-emerald-500" /> Ảnh / Video
         </button>
-        <button onClick={onClick} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl hover:bg-slate-100">
-          <Smile className="w-5 h-5 text-amber-500" /> Cảm xúc<span className="hidden sm:inline"> / Hoạt động</span>
+        <button onClick={onClick} className="flex-1 flex items-center justify-center gap-2 min-h-10 rounded-xl hover:bg-slate-100 transition-colors">
+          <Smile className="w-5 h-5 text-amber-500" />
+          <span>
+            Cảm xúc<span className="hidden sm:inline"> / Hoạt động</span>
+          </span>
         </button>
       </div>
     </div>

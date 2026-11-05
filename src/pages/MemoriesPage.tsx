@@ -17,12 +17,12 @@ export const MemoriesPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-2xl">
+    <div className="page-narrow">
       <PageHeader icon={Clock} iconColor="bg-indigo-50 text-indigo-600" title="Kỷ niệm" subtitle="Những gì bạn đã chia sẻ vào ngày này các năm trước" />
       {memoryPosts.length === 0 && <EmptyState icon={Clock} title="Chưa có kỷ niệm nào cho ngày hôm nay" />}
       {memoryPosts.map((post) => (
         <div key={post.id}>
-          <p className="flex items-center gap-2 mb-2 px-1 text-xs font-bold text-indigo-600">
+          <p className="flex items-center gap-2 mb-2 px-1 text-xs font-semibold text-indigo-600">
             <Clock className="w-3.5 h-3.5" /> {thisYear - new Date(post.createdAt).getFullYear()} năm trước, vào ngày này
           </p>
           <PostCard post={post} />

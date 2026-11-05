@@ -26,7 +26,7 @@ export const NotificationsPage: React.FC = () => {
   const shown = notifications.filter(filter.match);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-narrow">
       <PageHeader icon={Bell} title="Thông báo" subtitle={unread > 0 ? `Bạn có ${unread} thông báo chưa đọc` : 'Tất cả thông báo đã được đọc'}>
         {unread > 0 && (
           <button onClick={markAllNotificationsAsRead} className="btn-secondary">
@@ -35,12 +35,14 @@ export const NotificationsPage: React.FC = () => {
         )}
       </PageHeader>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
-        {FILTERS.map((f) => (
-          <TabButton key={f.key} active={filter.key === f.key} onClick={() => setFilter(f)}>
-            {f.label}
-          </TabButton>
-        ))}
+      <div className="card p-2 mb-5">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-fade-x">
+          {FILTERS.map((f) => (
+            <TabButton key={f.key} active={filter.key === f.key} onClick={() => setFilter(f)}>
+              {f.label}
+            </TabButton>
+          ))}
+        </div>
       </div>
 
       {notificationsStatus === 'loading' ? (
@@ -50,7 +52,7 @@ export const NotificationsPage: React.FC = () => {
       ) : shown.length === 0 ? (
         <EmptyState icon={Sparkles} title={filter.key === 'all' ? 'Chưa có thông báo nào' : 'Không có thông báo phù hợp'} description={filter.key === 'all' ? 'Khi có người tương tác với bạn, thông báo sẽ hiện ở đây.' : 'Thử chọn bộ lọc khác để xem thêm.'} />
       ) : (
-        <div className="card rounded-3xl overflow-hidden divide-y divide-slate-100">
+        <div className="card rounded-2xl overflow-hidden divide-y divide-slate-100">
           {shown.map((n) => (
             <button key={n.id} onClick={() => openNotification(n)} className={`w-full text-left p-3.5 sm:p-4 flex items-start gap-3.5 hover:bg-slate-50 ${n.isRead ? '' : 'bg-blue-50/40'}`}>
               <div className="relative shrink-0">

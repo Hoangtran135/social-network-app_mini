@@ -41,10 +41,10 @@ export const VerifyEmailBanner: React.FC = () => {
           Email <b className="break-all">{currentUser.email}</b> chưa được xác minh. Hãy mở email chúng tôi đã gửi và bấm vào liên kết để bảo vệ tài khoản.
         </p>
         <div className="flex gap-2">
-          <button onClick={resend} disabled={busy !== null} className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 disabled:opacity-60">
+          <button onClick={resend} disabled={busy !== null} className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-60">
             {busy === 'resend' && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Gửi lại email
           </button>
-          <button onClick={check} disabled={busy !== null} className="px-3 py-1.5 rounded-lg bg-white hover:bg-amber-100 border border-amber-300 font-bold text-xs disabled:opacity-60">
+          <button onClick={check} disabled={busy !== null} className="px-3 py-1.5 rounded-lg bg-white hover:bg-amber-100 border border-amber-300 font-semibold text-xs disabled:opacity-60">
             Tôi đã xác minh
           </button>
         </div>

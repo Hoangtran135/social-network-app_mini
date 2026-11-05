@@ -19,7 +19,7 @@ export const HashtagPage: React.FC = () => {
   }, [tag]);
 
   return (
-    <div className="max-w-2xl">
+    <div className="page-narrow">
       <PageHeader
         icon={Hash}
         title={`#${tag}`}

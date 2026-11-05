@@ -109,7 +109,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
     return (
       <div onClick={onToggleMinimize} style={{ right }} className="max-sm:hidden fixed bottom-0 w-[280px] h-12 px-3 bg-white rounded-t-xl shadow-2xl border border-slate-200 z-40 cursor-pointer flex items-center gap-2">
         <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-        <span className="flex-1 font-bold text-xs text-slate-800 truncate">{title}</span>
+        <span className="flex-1 font-semibold text-xs text-slate-800 truncate">{title}</span>
         <button
           aria-label="Đóng cuộc trò chuyện"
           onClick={(e) => {
@@ -133,9 +133,9 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
       <div onClick={toggleMinimize} style={{ backgroundColor: color }} className="h-14 px-3 flex items-center gap-2 text-white sm:cursor-pointer sm:rounded-t-2xl shrink-0">
         <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-xs truncate">{title}</div>
+          <div className="font-semibold text-xs truncate">{title}</div>
           {partner && (
-            <div className="text-[10px] opacity-80">{partner.isOnline ? 'Đang hoạt động' : partner.lastActive ? `Hoạt động ${timeAgo(partner.lastActive)}` : 'Không hoạt động'}</div>
+            <div className="text-[11px] opacity-80">{partner.isOnline ? 'Đang hoạt động' : partner.lastActive ? `Hoạt động ${timeAgo(partner.lastActive)}` : 'Không hoạt động'}</div>
           )}
         </div>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
@@ -189,7 +189,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
           className="px-3 py-2 border-b border-slate-100 flex gap-2"
         >
           <input autoFocus value={nickname} onChange={(e) => setNicknameText(e.target.value)} placeholder={`Biệt danh cho ${partner.name} (để trống = xoá)`} className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200" />
-          <button type="submit" className="btn-primary px-3 py-1.5">
+          <button type="submit" className="btn-primary btn-sm">
             Lưu
           </button>
         </form>
@@ -275,7 +275,7 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
   const [showReactions, setShowReactions] = useState(false);
 
   // Tin hệ thống (vd "A đã đặt biệt danh...") hiện ở giữa
-  if (m.kind === 'system') return <p className="text-center text-[10px] text-slate-400">{m.content}</p>;
+  if (m.kind === 'system') return <p className="text-center text-[11px] text-slate-400">{m.content}</p>;
 
   const isMine = m.senderId === currentUser?.id;
   const reactions = Object.values(m.reactions || {});
@@ -305,7 +305,7 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
                   </a>
                 )
               )}
-              <div className="text-[9px] mt-1 flex items-center justify-end gap-1 opacity-70">
+              <div className="text-[11px] mt-1 flex items-center justify-end gap-1 opacity-70">
                 {timeAgo(m.createdAt)} {isMine && m.isRead && <CheckCheck className="w-3 h-3" />}
               </div>
             </>
@@ -316,7 +316,7 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
             {[...new Set(reactions)].join('')} {reactions.length > 1 && reactions.length}
           </div>
         )}
-        {isMine && status && <div className="mt-0.5 text-[10px] text-slate-400 text-right">{status}</div>}
+        {isMine && status && <div className="mt-0.5 text-[11px] text-slate-400 text-right">{status}</div>}
       </div>
 
       {(

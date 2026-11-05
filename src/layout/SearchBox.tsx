@@ -65,7 +65,7 @@ export const SearchBox: React.FC = () => {
           setTimeout(() => inputRef.current?.focus(), 0);
         }}
         aria-label="Tìm kiếm"
-        className="sm:hidden p-2 rounded-full text-slate-700 bg-slate-100 hover:bg-slate-200"
+        className="sm:hidden icon-btn"
       >
         <Search className="w-5 h-5" />
       </button>
@@ -95,7 +95,7 @@ export const SearchBox: React.FC = () => {
             autoComplete="off"
             placeholder="Tìm kiếm mọi người..."
             aria-label="Tìm kiếm mọi người"
-            className="w-full pl-10 pr-9 py-2 text-sm bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 [&::-webkit-search-cancel-button]:hidden"
+            className="w-full h-10 pl-10 pr-9 text-sm bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -133,7 +133,7 @@ export const SearchBox: React.FC = () => {
                 <SearchX className="w-7 h-7" /> Không tìm thấy "{query.trim()}"
               </p>
             )}
-            {!!results?.length && <p className="px-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Mọi người</p>}
+            {!!results?.length && <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Mọi người</p>}
             {results?.map((u) => (
               <Link key={u.id} to={`/profile/${u.id}`} onClick={() => { close(); setQuery(''); }} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
                 <Avatar src={u.avatar} size="w-10 h-10" online={u.isOnline} />

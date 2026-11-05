@@ -86,7 +86,7 @@ export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> 
         onMouseLeave={() => setHolding(false)}
         onTouchStart={() => setHolding(true)}
         onTouchEnd={() => setHolding(false)}
-        className="w-full max-w-sm h-[100dvh] sm:h-[85dvh] bg-slate-900 sm:rounded-3xl overflow-hidden relative flex flex-col"
+        className="w-full max-w-sm h-[100dvh] sm:h-[85dvh] bg-slate-900 sm:rounded-2xl overflow-hidden relative flex flex-col"
       >
         {/* Thanh tiến trình: story đã qua đầy, story hiện tại theo progress, story sau trống */}
         <div className="absolute top-3 inset-x-3 z-30 flex gap-1.5">
@@ -120,7 +120,7 @@ export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> 
         <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/80 to-transparent space-y-3 text-white relative z-30 max-h-[45%] overflow-y-auto">
           {isMine ? (
             <>
-              <button onClick={() => setShowViewers(!showViewers)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-full text-xs font-bold">
+              <button onClick={() => setShowViewers(!showViewers)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-full text-xs font-semibold">
                 <Eye className="w-4 h-4" /> {story.viewers.length} người đã xem
               </button>
               {!!story.reactions?.length && (

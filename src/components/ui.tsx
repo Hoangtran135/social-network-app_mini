@@ -15,14 +15,14 @@ export const PageHeader: React.FC<{
   before?: React.ReactNode;
   children?: React.ReactNode;
 }> = ({ icon: Icon, title, subtitle, iconColor = 'bg-blue-50 text-blue-600', before, children }) => (
-  <div className="card rounded-3xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+  <div className="card p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
     <div className="flex items-center gap-3 min-w-0">
       {before}
-      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconColor}`}>
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+      <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${iconColor}`}>
+        <Icon className="w-6 h-6" />
       </div>
       <div className="min-w-0">
-        <h1 className="text-lg sm:text-xl font-black text-slate-900 truncate">{title}</h1>
+        <h1 className="page-title truncate">{title}</h1>
         {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
       </div>
     </div>
@@ -41,7 +41,7 @@ export const EmptyState: React.FC<{ icon: LucideIcon; title: string; description
     <div className="empty-icon">
       <Icon className="w-8 h-8" />
     </div>
-    <h3 className="text-base font-bold text-slate-800">{title}</h3>
+    <h3 className="section-title">{title}</h3>
     {description && <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">{description}</p>}
     {children && <div className="mt-5">{children}</div>}
   </div>
@@ -57,7 +57,7 @@ export const ErrorState: React.FC<{ title?: string; description?: string; onRetr
     <div className="empty-icon !bg-rose-50 !text-rose-500">
       <AlertTriangle className="w-8 h-8" />
     </div>
-    <h3 className="text-base font-bold text-slate-800">{title}</h3>
+    <h3 className="section-title">{title}</h3>
     <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">{description}</p>
     {onRetry && (
       <button onClick={onRetry} className="btn-primary mt-5">
@@ -99,7 +99,7 @@ export const PostSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => (
 
 /** Danh sách dòng giả (thông báo, bạn bè...) lúc đang tải. */
 export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
-  <div role="status" aria-label="Đang tải danh sách" className="card rounded-3xl divide-y divide-slate-100">
+  <div role="status" aria-label="Đang tải danh sách" className="card rounded-2xl divide-y divide-slate-100">
     {Array.from({ length: count }, (_, i) => (
       <div key={i} className="p-4 flex items-center gap-3.5">
         <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
@@ -149,7 +149,7 @@ export const FormField: React.FC<{ label: string; icon?: LucideIcon; labelRight?
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5 gap-2">
-        <label htmlFor={id} className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+        <label htmlFor={id} className="field-label">
           {label}
         </label>
         {labelRight}
@@ -167,7 +167,7 @@ export const FormField: React.FC<{ label: string; icon?: LucideIcon; labelRight?
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600"
+            className="absolute right-1 top-1/2 -translate-y-1/2 size-9 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600"
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -183,7 +183,7 @@ export const UserLinks: React.FC<{ users: { id: string; name: string }[] }> = ({
     {users.map((u, i) => (
       <React.Fragment key={u.id}>
         {i > 0 && ', '}
-        <Link to={`/profile/${u.id}`} className="font-bold text-blue-600 hover:underline">
+        <Link to={`/profile/${u.id}`} className="font-semibold text-blue-600 hover:underline">
           {u.name}
         </Link>
       </React.Fragment>
@@ -213,5 +213,5 @@ export const AvatarFrame: React.FC<{ frame?: string; className?: string; childre
 /** Huy hiệu đếm số (thông báo, tin nhắn): quá 99 thì hiện "99+". */
 export const CountBadge: React.FC<{ count: number; className?: string }> = ({ count, className = '' }) =>
   count > 0 ? (
-    <span className={`min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ${className}`}>{count > 99 ? '99+' : count}</span>
+    <span className={`min-w-5 h-5 px-1.5 bg-rose-500 text-white text-[11px] font-semibold leading-none rounded-full flex items-center justify-center ${className}`}>{count > 99 ? '99+' : count}</span>
   ) : null;

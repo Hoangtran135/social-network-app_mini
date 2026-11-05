@@ -31,7 +31,7 @@ export const ConfirmDialogProvider: React.FC<{ children: React.ReactNode }> = ({
           <div role="alertdialog" aria-modal="true" className="animate-pop bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2.5 text-rose-600">
               <AlertTriangle className="w-5 h-5" />
-              <h3 className="font-bold text-slate-800">Xác nhận</h3>
+              <h3 className="section-title">Xác nhận</h3>
             </div>
             <p className="mt-3 text-sm text-slate-600">{message}</p>
             <div className="flex gap-2 pt-5">

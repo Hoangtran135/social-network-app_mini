@@ -49,11 +49,11 @@ export const FriendsPage: React.FC = () => {
   const shownFriends = friends.filter((f) => `${f.name} ${f.username}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="max-w-4xl">
+    <div className="page-wide">
       <PageHeader icon={Users} title="Bạn bè" subtitle={`${friends.length} bạn bè · ${friendRequests.length} lời mời`} />
 
-      <div className="card p-3 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="card p-2 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-fade-x">
           <TabButton icon={UserCheck} active={tab === 'friends'} onClick={() => setTab('friends')}>
             Bạn bè ({friends.length})
           </TabButton>
@@ -116,7 +116,7 @@ export const FriendsPage: React.FC = () => {
       {friendsStatus === 'ready' && tab === 'requests' && (
         <>
           {friendRequests.length === 0 && sentFriendRequests.length === 0 && <EmptyState icon={UserPlus} title="Không có lời mời kết bạn nào" description="Khi có người gửi lời mời, bạn sẽ thấy ở đây." />}
-          {friendRequests.length > 0 && <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Lời mời đã nhận ({friendRequests.length})</h3>}
+          {friendRequests.length > 0 && <h3 className="field-label mb-3">Lời mời đã nhận ({friendRequests.length})</h3>}
           <Grid>
             {friendRequests.map((r) => (
               <UserCard
@@ -138,7 +138,7 @@ export const FriendsPage: React.FC = () => {
 
           {sentFriendRequests.length > 0 && (
             <>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-8 mb-3">Lời mời đã gửi ({sentFriendRequests.length})</h3>
+              <h3 className="field-label mt-8 mb-3">Lời mời đã gửi ({sentFriendRequests.length})</h3>
               <Grid>
                 {sentFriendRequests.map((r) =>
                   r.receiver ? (
@@ -169,7 +169,7 @@ export const FriendsPage: React.FC = () => {
                 user={u}
                 note={u.workplace}
                 actions={
-                  <button onClick={() => sendFriendRequest(u)} className="btn-primary w-full flex items-center justify-center gap-1.5">
+                  <button onClick={() => sendFriendRequest(u)} className="btn-primary w-full">
                     <UserPlus className="w-4 h-4" /> Thêm bạn bè
                   </button>
                 }

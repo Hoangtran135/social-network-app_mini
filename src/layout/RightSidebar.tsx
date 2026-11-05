@@ -18,7 +18,7 @@ export const RightSidebar: React.FC = () => {
       {friendRequests.length > 0 && (
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <h4 className="section-title flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-blue-600" /> Lời mời kết bạn
             </h4>
             <Link to="/friends" className="text-xs text-blue-600 hover:underline font-semibold">
@@ -30,15 +30,15 @@ export const RightSidebar: React.FC = () => {
               <Link to={`/profile/${req.sender.id}`} className="flex items-center gap-2.5">
                 <Avatar src={req.sender.avatar} />
                 <div className="min-w-0">
-                  <div className="font-bold text-xs text-slate-800 truncate">{req.sender.name}</div>
+                  <div className="font-semibold text-xs text-slate-800 truncate">{req.sender.name}</div>
                   <div className="text-[11px] text-slate-400 truncate">@{req.sender.username}</div>
                 </div>
               </Link>
               <div className="flex gap-1.5 mt-2">
-                <button onClick={() => acceptFriendRequest(req.id)} className="btn-primary flex-1 py-1.5">
+                <button onClick={() => acceptFriendRequest(req.id)} className="btn-primary btn-sm flex-1">
                   Xác nhận
                 </button>
-                <button onClick={() => rejectFriendRequest(req.id)} className="btn-secondary flex-1 py-1.5">
+                <button onClick={() => rejectFriendRequest(req.id)} className="btn-secondary btn-sm flex-1">
                   Xoá
                 </button>
               </div>
@@ -48,7 +48,7 @@ export const RightSidebar: React.FC = () => {
       )}
 
       <div className="card p-4">
-        <h4 className="font-bold text-slate-800 text-sm mb-3">Người liên hệ ({friends.length})</h4>
+        <h4 className="section-title mb-3">Người liên hệ ({friends.length})</h4>
         {friends.length === 0 && (
           <p className="py-4 text-center text-xs text-slate-400">
             Chưa có người liên hệ nào.{' '}
@@ -67,7 +67,7 @@ export const RightSidebar: React.FC = () => {
               <Avatar src={user.avatar} size="w-8 h-8" online={user.isOnline} />
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-slate-800 truncate">{user.name}</div>
-                <div className={`text-[10px] ${user.isOnline ? 'text-emerald-600' : 'text-slate-400'}`}>{user.isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}</div>
+                <div className={`text-[11px] ${user.isOnline ? 'text-emerald-600' : 'text-slate-400'}`}>{user.isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}</div>
               </div>
             </button>
           ))}

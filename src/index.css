@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/*
+ * HỆ THỐNG THIẾT KẾ (design tokens) — mọi kích thước dùng chung nằm ở đây để giao diện luôn đồng bộ:
+ *  - Chiều cao điều khiển: 40px (nút, ô nhập, icon tròn, avatar trên navbar), loại nhỏ 32px (.btn-sm), tab 36px.
+ *  - Bo góc: thẻ / hộp thoại 16px (rounded-2xl), điều khiển 12px (rounded-xl), nút nhỏ 8px (rounded-lg), ảnh đại diện / nút tròn: full.
+ *  - Chữ: tiêu đề trang 20px đậm 700, tiêu đề mục 16px 600, nội dung 14px, chú thích 12px, nhãn nhỏ tối thiểu 11px.
+ *  - Khung chứa .app-container dùng chung cho navbar và nội dung → mép trái / phải của logo, sidebar, cột phải luôn thẳng hàng.
+ */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
 /* Màu nền của trang (sáng / tối). Chế độ tối: thêm class "dark" vào <html> (xem src/context/ThemeContext.tsx). */
 :root {
   --page-bg: #f1f5f9;
@@ -32,22 +43,26 @@
 .dark .hover\:bg-white:hover {
   background-color: #1e293b;
 }
+.dark .ring-white {
+  --tw-ring-color: #1e293b;
+}
 .dark .border-white {
   border-color: #1e293b;
 }
-.dark [class*="bg-blue-50"],
-.dark [class*="bg-indigo-50"],
-.dark [class*="bg-violet-50"] {
+/* Nền nhạt (bg-xxx-50 và biến thể /opacity) → trong suốt nhẹ. Loại trừ bg-xxx-500 (huy hiệu, chấm online...) vì tên class chứa "bg-xxx-50" */
+.dark [class*="bg-blue-50"]:not([class*="bg-blue-500"]),
+.dark [class*="bg-indigo-50"]:not([class*="bg-indigo-500"]),
+.dark [class*="bg-violet-50"]:not([class*="bg-violet-500"]) {
   background-color: rgb(59 130 246 / 0.16);
 }
-.dark [class*="bg-rose-50"] {
+.dark [class*="bg-rose-50"]:not([class*="bg-rose-500"]) {
   background-color: rgb(244 63 94 / 0.16);
 }
-.dark [class*="bg-amber-50"],
-.dark [class*="bg-yellow-50"] {
+.dark [class*="bg-amber-50"]:not([class*="bg-amber-500"]),
+.dark [class*="bg-yellow-50"]:not([class*="bg-yellow-500"]) {
   background-color: rgb(245 158 11 / 0.16);
 }
-.dark [class*="bg-emerald-50"] {
+.dark [class*="bg-emerald-50"]:not([class*="bg-emerald-500"]) {
   background-color: rgb(16 185 129 / 0.16);
 }
 .dark [class*="border-blue-1"],
@@ -76,7 +91,9 @@
   body {
     @apply text-slate-900 antialiased selection:bg-blue-500 selection:text-white;
     background-color: var(--page-bg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
   }
 
   /* Tailwind 4 đặt con trỏ mặc định cho nút → trả lại con trỏ "bàn tay" cho mọi phần tử bấm được */
@@ -112,6 +129,44 @@
 
 /* Semantic component classes — short names in JSX, real Tailwind utilities underneath. */
 @layer components {
+  /* Khung chứa dùng chung: navbar và nội dung trang cùng bề rộng + lề → mọi mép thẳng hàng */
+  .app-container {
+    @apply mx-auto w-full max-w-7xl px-3 sm:px-4 lg:px-6;
+  }
+
+  /* Ba mức bề rộng nội dung (mỗi trang chọn một, không tự đặt max-w riêng) */
+  .page-narrow {
+    @apply w-full max-w-2xl;
+  }
+  .page-medium {
+    @apply w-full max-w-3xl;
+  }
+  .page-wide {
+    @apply w-full max-w-5xl;
+  }
+
+  /* Chữ */
+  .page-title {
+    @apply text-xl font-bold tracking-tight text-slate-900;
+  }
+  .section-title {
+    @apply text-base font-semibold text-slate-900;
+  }
+  .field-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  /* Mở rộng vùng bấm (tối thiểu ~40px cao) cho chữ / liên kết nhỏ mà không làm đổi bố cục */
+  .tap-area {
+    @apply relative;
+  }
+  .tap-area::after {
+    content: "";
+    position: absolute;
+    inset: -12px -4px;
+  }
+
+  /* Thẻ */
   .card {
     @apply bg-white rounded-2xl border border-slate-200 shadow-xs;
   }
@@ -119,21 +174,39 @@
     @apply bg-white rounded-2xl border border-slate-200 shadow-xs p-10 text-center;
   }
 
+  /* Nút: cao tối thiểu 40px, chữ 14px / 600, bo 12px */
   .btn-primary {
-    @apply px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-bold shadow-md shadow-blue-500/20 transition-colors disabled:opacity-50 disabled:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold whitespace-nowrap shadow-xs transition-colors disabled:opacity-50 disabled:shadow-none;
   }
   .btn-secondary {
-    @apply px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[13px] font-bold transition-colors disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50;
   }
-  .btn-tab {
-    @apply px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:bg-slate-100;
+  /* Nút nhỏ (trong thẻ nhỏ, danh sách): cao 32px */
+  .btn-sm {
+    @apply min-h-8 px-3 text-xs rounded-lg;
   }
-  .btn-tab--active {
-    @apply px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-blue-600 text-white shadow-xs;
+  /* Nút tròn chỉ có icon: 40x40 */
+  .icon-btn {
+    @apply relative inline-flex items-center justify-center size-10 shrink-0 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors;
+  }
+  .icon-btn--active {
+    @apply bg-blue-100 text-blue-600 hover:bg-blue-100;
   }
 
+  /* Tab / bộ lọc: cao 36px */
+  .btn-tab {
+    @apply inline-flex items-center gap-2 min-h-9 px-3.5 rounded-xl text-sm font-semibold transition-colors text-slate-600 hover:bg-slate-100;
+  }
+  .btn-tab--active {
+    @apply inline-flex items-center gap-2 min-h-9 px-3.5 rounded-xl text-sm font-semibold transition-colors bg-blue-600 text-white shadow-xs;
+  }
+
+  /* Ô nhập: cao tối thiểu 40px */
   .input {
-    @apply w-full text-sm p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:bg-slate-100 disabled:cursor-not-allowed;
+    @apply block w-full min-h-10 px-3.5 py-2 text-sm bg-slate-50 rounded-xl border border-slate-200 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition disabled:bg-slate-100 disabled:cursor-not-allowed;
+  }
+  textarea.input {
+    @apply py-2.5;
   }
 
   .empty-icon {
@@ -158,6 +231,14 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Thanh tab cuộn ngang trên điện thoại: mép phải mờ dần để người dùng biết còn nội dung phía sau (không bị cắt cụt) */
+@media (max-width: 639px) {
+  .scroll-fade-x {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
 }
 
 /* Hide scrollbar for clean story slider */

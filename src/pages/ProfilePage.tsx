@@ -114,8 +114,8 @@ export const ProfilePage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-5xl">
-      <div className="card rounded-3xl overflow-hidden mb-5">
+    <div className="page-wide">
+      <div className="card rounded-2xl overflow-hidden mb-5">
         <div className="h-40 sm:h-56 lg:h-64 bg-gradient-to-r from-blue-600 to-purple-600">
           {user.coverImage && <img src={user.coverImage} alt="" className="w-full h-full object-cover" />}
         </div>
@@ -160,7 +160,7 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-black text-slate-900 break-words">{user.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 break-words">{user.name}</h1>
             <p className="text-xs text-slate-500">@{user.username}</p>
             {user.bio && <p className="text-sm text-slate-700 mt-2.5 whitespace-pre-line break-words">{user.bio}</p>}
             {links.length > 0 && (
@@ -185,7 +185,7 @@ export const ProfilePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex gap-2 border-t border-slate-100 mt-5 pt-3 overflow-x-auto no-scrollbar">
+          <div className="flex gap-1 border-t border-slate-100 mt-5 pt-3 overflow-x-auto no-scrollbar scroll-fade-x">
             <TabButton icon={FileText} active={tab === 'posts'} onClick={() => setTab('posts')}>
               Bài viết
             </TabButton>
@@ -206,7 +206,7 @@ export const ProfilePage: React.FC = () => {
         <div className="grid lg:grid-cols-[19rem_minmax(0,1fr)] gap-5 items-start">
           {/* Thẻ giới thiệu nhanh (dính khi cuộn trên màn hình lớn) */}
           <aside className="card p-5 lg:sticky lg:top-20">
-            <h2 className="font-bold text-slate-900 mb-3">Giới thiệu</h2>
+            <h2 className="section-title mb-3">Giới thiệu</h2>
             <ul className="space-y-3">
               <InfoRow icon={Briefcase}>{user.workplace && `Làm việc tại ${user.workplace}`}</InfoRow>
               <InfoRow icon={GraduationCap}>{user.education && `Học tại ${user.education}`}</InfoRow>
@@ -264,7 +264,7 @@ export const ProfilePage: React.FC = () => {
         <div className="card p-5 sm:p-6 max-w-2xl space-y-4 text-sm">
           {info.map(([label, value]) => (
             <div key={label}>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">{label}</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">{label}</span>
               <div className="text-slate-800 break-words">{value || <span className="text-slate-400">Chưa cập nhật</span>}</div>
             </div>
           ))}

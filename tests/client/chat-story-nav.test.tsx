@@ -187,7 +187,7 @@ describe('Cửa sổ chat', () => {
     await user.click(screen.getByText('Đặt biệt danh'));
     await user.type(screen.getByPlaceholderText(/Biệt danh cho Bạn Một/), 'Bạn thân');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
-    expect(await screen.findByText('Bạn thân', { selector: 'div.font-bold' })).toBeTruthy();
+    expect(await screen.findByText('Bạn thân', { selector: 'div.font-semibold' })).toBeTruthy();
     expect(screen.getByText(/đã đặt biệt danh "Bạn thân"/)).toBeTruthy();
   });
 
@@ -266,7 +266,7 @@ describe('Chat realtime', () => {
     db.messages.cvX = [incoming('Chào, mình là người lạ', 'cvX', 's1').message as never];
     act(() => serverEmit('message:new', incoming('Chào, mình là người lạ', 'cvX', 's1')));
     expect(await screen.findByPlaceholderText('Nhập tin nhắn...')).toBeTruthy();
-    expect(await screen.findByText('Người Lạ', { selector: 'div.font-bold' })).toBeTruthy();
+    expect(await screen.findByText('Người Lạ', { selector: 'div.font-semibold' })).toBeTruthy();
     expect(await screen.findByText('Chào, mình là người lạ', { selector: 'p.whitespace-pre-wrap' })).toBeTruthy();
     expect(calls.filter((c) => c.path === '/messages/conversations' && c.method === 'GET').length).toBeGreaterThanOrEqual(2);
   });

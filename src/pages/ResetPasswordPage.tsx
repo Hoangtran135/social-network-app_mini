@@ -36,8 +36,8 @@ export const ResetPasswordPage: React.FC = () => {
   if (!token || !email) {
     content = (
       <div className="text-center py-4 space-y-3">
-        <h3 className="text-lg font-bold text-slate-800">Liên kết không hợp lệ</h3>
-        <Link to="/forgot-password" className="text-xs font-bold text-blue-600">
+        <h3 className="page-title">Liên kết không hợp lệ</h3>
+        <Link to="/forgot-password" className="text-xs font-semibold text-blue-600">
           Yêu cầu liên kết mới
         </Link>
       </div>
@@ -47,7 +47,7 @@ export const ResetPasswordPage: React.FC = () => {
   } else {
     content = (
       <>
-        <h2 className="text-xl font-black text-slate-800 mb-2">Mật khẩu mới</h2>
+        <h2 className="page-title mb-2">Mật khẩu mới</h2>
         <p className="text-xs text-slate-500 mb-5">
           Đặt mật khẩu mới cho tài khoản <b>{email}</b>.
         </p>

@@ -30,7 +30,7 @@ export const MainLayout: React.FC = () => {
       <VerifyEmailBanner />
 
       {/* pb-24 trên điện thoại chừa chỗ cho thanh điều hướng dưới */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 pb-24 lg:pb-6">
+      <main className="app-container flex-1 py-4 sm:py-6 pb-24 lg:pb-6">
         <div className={`grid grid-cols-1 ${columns} gap-6 items-start`}>
           <LeftSidebar />
           {/* [&>*]:mx-auto — mỗi trang tự giới hạn bề rộng (max-w-*), ở đây căn giữa chúng trong cột nội dung */}

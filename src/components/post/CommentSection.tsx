@@ -187,7 +187,7 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; canReply?: boole
           </form>
         ) : (
           <div className="bg-white rounded-2xl p-2.5 border border-slate-200 inline-block max-w-full text-xs">
-            <Link to={`/profile/${c.author.id}`} className="font-bold text-slate-900 hover:underline">
+            <Link to={`/profile/${c.author.id}`} className="font-semibold text-slate-900 hover:underline">
               {c.author.name}
             </Link>
             <p className="text-slate-800 mt-0.5 whitespace-pre-line break-words">{c.content}</p>
@@ -227,7 +227,7 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; canReply?: boole
             </button>
           </div>
           {reactions.length > 0 && (
-            <span title={`${reactions.length} cảm xúc`} className="bg-white border border-slate-200 rounded-full px-1.5 py-0.5 text-[10px]">
+            <span title={`${reactions.length} cảm xúc`} className="bg-white border border-slate-200 rounded-full px-1.5 py-0.5 text-[11px]">
               {topEmojis} {reactions.length}
             </span>
           )}

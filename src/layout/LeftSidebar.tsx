@@ -44,7 +44,7 @@ export const LeftSidebar: React.FC = () => {
       <Link to={myProfile} className="card flex items-center gap-3 p-3 mb-3 hover:border-blue-300">
         <img src={currentUser?.avatar} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
         <div className="min-w-0">
-          <h4 className="font-bold text-slate-800 text-sm truncate">{currentUser?.name}</h4>
+          <h4 className="text-sm font-semibold text-slate-800 truncate">{currentUser?.name}</h4>
           <p className="text-xs text-slate-400 truncate">@{currentUser?.username}</p>
         </div>
       </Link>
@@ -62,7 +62,7 @@ export const LeftSidebar: React.FC = () => {
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
-                {!!badge && <CountBadge count={badge} className="h-5 min-w-5 text-xs" />}
+                {!!badge && <CountBadge count={badge} />}
               </Link>
             );
           })}

@@ -9,7 +9,7 @@ import { PageHeader, EmptyState } from '../components/ui';
 export const SavedPostsPage: React.FC = () => {
   const saved = useSocial().posts.filter((p) => p.isSaved);
   return (
-    <div className="max-w-2xl">
+    <div className="page-narrow">
       <PageHeader icon={Bookmark} iconColor="bg-amber-50 text-amber-600" title="Bài viết đã lưu" subtitle={`Bạn đã lưu ${saved.length} bài viết`} />
       {saved.length === 0 && <EmptyState icon={Bookmark} title="Chưa có bài viết nào được lưu" description='Bấm "Lưu bài viết" trong menu "..." của mỗi bài để xem lại sau.' />}
       {saved.map((post) => (

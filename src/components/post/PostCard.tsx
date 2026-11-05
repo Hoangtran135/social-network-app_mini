@@ -39,7 +39,7 @@ const ImageGrid: React.FC<{ images: string[]; onOpen: (img: string) => void }> =
           className={`relative block overflow-hidden bg-slate-100 ${images.length === 1 ? 'max-h-[32rem]' : images.length === 3 && i === 0 ? 'row-span-2' : 'aspect-square'}`}
         >
           <img src={img} alt="" loading="lazy" className={`w-full object-cover ${images.length === 1 ? 'max-h-[32rem]' : 'h-full'}`} />
-          {extra > 0 && i === 3 && <span className="absolute inset-0 bg-black/55 text-white text-2xl font-bold flex items-center justify-center">+{extra}</span>}
+          {extra > 0 && i === 3 && <span className="absolute inset-0 bg-black/55 text-white text-2xl font-semibold flex items-center justify-center">+{extra}</span>}
         </button>
       ))}
     </div>
@@ -111,7 +111,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </Link>
           <div className="min-w-0 text-sm">
             <div>
-              <Link to={`/profile/${post.author.id}`} className="font-bold text-slate-900 hover:text-blue-600 break-words">
+              <Link to={`/profile/${post.author.id}`} className="tap-area font-semibold text-slate-900 hover:text-blue-600 break-words">
                 {post.author.name}
               </Link>
               {post.wallOwnerId && (
@@ -194,7 +194,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           <span>{hasReactions && `${reactionTypes.slice(0, 3).map((t) => REACTIONS[t].emoji).join('')} ${post.reactions.length}`}</span>
           <span className="text-right">
             {post.commentsCount > 0 && (
-              <button onClick={() => setShowComments(!showComments)} className="hover:underline">
+              <button onClick={() => setShowComments(!showComments)} className="tap-area hover:underline">
                 {post.commentsCount} bình luận
               </button>
             )}
@@ -285,7 +285,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowSendToFriend(false)}>
           <div role="dialog" aria-modal="true" aria-label="Gửi bài viết cho bạn bè" className="animate-pop bg-white rounded-2xl max-w-sm w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-800 text-sm">Gửi bài viết cho bạn bè</h3>
+              <h3 className="text-sm font-semibold text-slate-800">Gửi bài viết cho bạn bè</h3>
               <button onClick={() => setShowSendToFriend(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
@@ -307,7 +307,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShareDialog(false)}>
           <div role="dialog" aria-modal="true" aria-label="Chia sẻ bài viết" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-800 text-sm">Chia sẻ lên trang cá nhân</h3>
+              <h3 className="text-sm font-semibold text-slate-800">Chia sẻ lên trang cá nhân</h3>
               <button onClick={() => setShareDialog(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
@@ -331,7 +331,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 setShareMessage('');
                 setShareDialog(false);
               }}
-              className="btn-primary w-full mt-3 py-2.5"
+              className="btn-primary w-full mt-3"
             >
               Chia sẻ ngay
             </button>
@@ -343,20 +343,20 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
           <div role="dialog" aria-modal="true" aria-label="Lịch sử chỉnh sửa" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-800 text-sm">Lịch sử chỉnh sửa</h3>
+              <h3 className="text-sm font-semibold text-slate-800">Lịch sử chỉnh sửa</h3>
               <button onClick={() => setShowHistory(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="overflow-y-auto space-y-3 text-sm">
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
-                <p className="text-[11px] font-bold text-blue-600 mb-1">Phiên bản hiện tại · {timeAgo(post.updatedAt)}</p>
+                <p className="text-[11px] font-semibold text-blue-600 mb-1">Phiên bản hiện tại · {timeAgo(post.updatedAt)}</p>
                 <p className="whitespace-pre-line break-words text-slate-800">{post.content || '(không có nội dung chữ)'}</p>
               </div>
               {!post.editHistory?.length && <p className="text-xs text-slate-500 text-center py-2">Bài viết này không có phiên bản nội dung cũ (chỉ đổi ảnh, quyền riêng tư hoặc cảm xúc).</p>}
               {[...(post.editHistory || [])].reverse().map((version, i) => (
                 <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <p className="text-[11px] font-bold text-slate-500 mb-1">Phiên bản cũ · bị thay thế {timeAgo(version.editedAt)}</p>
+                  <p className="text-[11px] font-semibold text-slate-500 mb-1">Phiên bản cũ · bị thay thế {timeAgo(version.editedAt)}</p>
                   <p className="whitespace-pre-line break-words text-slate-700">{version.content || '(không có nội dung chữ)'}</p>
                 </div>
               ))}

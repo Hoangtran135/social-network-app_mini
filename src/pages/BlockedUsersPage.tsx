@@ -26,7 +26,7 @@ export const BlockedUsersPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="page-narrow">
       <PageHeader
         icon={ShieldOff}
         iconColor="bg-rose-50 text-rose-600"
@@ -41,7 +41,7 @@ export const BlockedUsersPage: React.FC = () => {
       {users === null && <PageLoading />}
       {users?.length === 0 && <EmptyState icon={UserX} title="Bạn chưa chặn ai" description="Người bị chặn sẽ không xem được trang cá nhân hay nhắn tin cho bạn." />}
       {!!users?.length && (
-        <div className="card rounded-3xl p-4 divide-y divide-slate-100">
+        <div className="card rounded-2xl p-4 divide-y divide-slate-100">
           {users.map((user) => (
             <div key={user.id} className="flex items-center gap-3 py-3">
               <img src={user.avatar} alt="" className="w-12 h-12 rounded-full object-cover grayscale shrink-0" />

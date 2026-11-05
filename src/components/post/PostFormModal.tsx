@@ -61,7 +61,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         className="animate-pop bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 max-h-[92dvh] overflow-y-auto overscroll-contain"
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800">{isEdit ? 'Chỉnh sửa bài viết' : wallOwner ? `Đăng lên tường của ${wallOwner.name}` : 'Tạo bài viết mới'}</h3>
+          <h3 className="section-title">{isEdit ? 'Chỉnh sửa bài viết' : wallOwner ? `Đăng lên tường của ${wallOwner.name}` : 'Tạo bài viết mới'}</h3>
           <button type="button" aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
             <X className="w-5 h-5" />
           </button>
@@ -70,7 +70,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         <div className="flex items-center gap-3">
           <img src={currentUser?.avatar} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
           <div className="min-w-0">
-            <div className="font-bold text-sm text-slate-800 break-words">
+            <div className="font-semibold text-sm text-slate-800 break-words">
               {currentUser?.name}
               {feeling && <span className="font-normal text-slate-500 text-xs"> {feelingText(feeling)}</span>}
               {taggedUsers.length > 0 && <span className="font-normal text-slate-500 text-xs"> cùng với {taggedUsers.map((u) => u.name).join(', ')}</span>}
@@ -152,7 +152,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         <input ref={imageUpload.inputRef} type="file" accept="image/*" multiple className="hidden" onChange={imageUpload.onChange} />
         <input ref={videoUpload.inputRef} type="file" accept="video/*" className="hidden" onChange={videoUpload.onChange} />
         <div className="p-3 border border-slate-200 rounded-xl flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700">Thêm vào bài viết</span>
+          <span className="text-xs font-semibold text-slate-700">Thêm vào bài viết</span>
           <div className="flex gap-1">
             <button type="button" title="Ảnh" onClick={imageUpload.open} disabled={!!video} className="p-2 rounded-lg hover:bg-slate-100 text-emerald-600 disabled:opacity-40">
               <ImageIcon className="w-5 h-5" />
@@ -174,7 +174,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
           </div>
         </div>
 
-        <button type="submit" disabled={isEmpty || isUploading} className="btn-primary w-full py-3 text-sm sticky bottom-0">
+        <button type="submit" disabled={isEmpty || isUploading} className="btn-primary w-full sticky bottom-0">
           {isEdit ? 'Lưu thay đổi' : wallOwner ? 'Đăng lên tường' : 'Đăng bài viết'}
         </button>
       </form>

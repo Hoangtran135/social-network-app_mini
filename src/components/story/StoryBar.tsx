@@ -16,12 +16,14 @@ export const StoryBar: React.FC = () => {
 
   return (
     <div className="mb-5 flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-      <button onClick={() => setIsCreating(true)} className="card w-28 h-44 shrink-0 overflow-hidden flex flex-col relative hover:shadow-md transition-shadow">
-        <img src={currentUser?.avatar} alt="" className="w-full h-3/4 object-cover" />
-        <span className="absolute left-1/2 top-[75%] -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-blue-600 text-white border-4 border-white flex items-center justify-center">
-          <Plus className="w-4 h-4" />
+      <button onClick={() => setIsCreating(true)} className="card w-28 h-44 shrink-0 flex flex-col items-center justify-center gap-3 hover:shadow-md hover:border-blue-300 transition">
+        <span className="relative">
+          <img src={currentUser?.avatar} alt="" className="size-14 rounded-full object-cover bg-slate-100 border border-slate-200" />
+          <span className="absolute -bottom-1 -right-1 size-6 rounded-full bg-blue-600 text-white border-2 border-white flex items-center justify-center">
+            <Plus className="w-3.5 h-3.5" />
+          </span>
         </span>
-        <span className="flex-1 flex items-end justify-center pb-2 text-[11px] font-bold text-slate-800">Tạo tin</span>
+        <span className="text-xs font-semibold text-slate-800">Tạo tin</span>
       </button>
 
       {stories.map((story, index) => {
@@ -29,7 +31,7 @@ export const StoryBar: React.FC = () => {
         return (
           <button key={story.id} type="button" aria-label={`Xem tin của ${story.user.name}`} onClick={() => setViewingIndex(index)} className="relative w-28 h-44 rounded-2xl overflow-hidden shrink-0 text-left hover:brightness-95 transition">
             {story.type === 'text' ? (
-              <div className={`w-full h-full bg-gradient-to-br ${story.backgroundGradient} flex items-center justify-center p-3 text-center text-white text-[11px] font-bold`}>
+              <div className={`w-full h-full bg-gradient-to-br ${story.backgroundGradient} flex items-center justify-center p-3 text-center text-white text-xs font-semibold`}>
                 {story.textContent}
               </div>
             ) : (
@@ -37,7 +39,7 @@ export const StoryBar: React.FC = () => {
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
             <img src={story.user.avatar} alt="" className={`absolute top-2.5 left-2.5 w-9 h-9 rounded-full object-cover border-2 ${viewed ? 'border-slate-400' : 'border-blue-500'}`} />
-            <span className="absolute bottom-2.5 inset-x-2 text-xs font-bold text-white truncate">{story.user.name}</span>
+            <span className="absolute bottom-2.5 inset-x-2 text-xs font-semibold text-white truncate">{story.user.name}</span>
           </button>
         );
       })}

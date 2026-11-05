@@ -56,16 +56,16 @@ export const EditProfilePage: React.FC = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to={`/profile/${currentUser?.id}`} className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-blue-600">
+    <form onSubmit={handleSubmit} className="page-medium space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="page-title">Chỉnh sửa hồ sơ</h1>
+        <Link to={`/profile/${currentUser?.id}`} className="btn-secondary btn-sm">
           <ArrowLeft className="w-4 h-4" /> Quay lại trang cá nhân
         </Link>
-        <h1 className="text-xl font-black text-slate-800">Chỉnh sửa hồ sơ</h1>
       </div>
 
-      <div className="card rounded-3xl overflow-hidden">
-        <h3 className="font-bold text-sm text-slate-800 px-5 sm:px-6 pt-5 pb-3">Ảnh bìa & ảnh đại diện</h3>
+      <div className="card rounded-2xl overflow-hidden">
+        <h3 className="section-title px-5 sm:px-6 pt-5 pb-3">Ảnh bìa & ảnh đại diện</h3>
         {/* Xem trước đúng như trang cá nhân: ảnh bìa, ảnh đại diện đè lên mép dưới */}
         <div className="relative">
           <div className="h-32 sm:h-44 bg-gradient-to-r from-blue-600 to-purple-600">
@@ -81,8 +81,8 @@ export const EditProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card rounded-3xl p-5 sm:p-6 space-y-3">
-        <h3 className="font-bold text-sm text-slate-800">Khung ảnh đại diện</h3>
+      <div className="card rounded-2xl p-5 sm:p-6 space-y-3">
+        <h3 className="section-title">Khung ảnh đại diện</h3>
         <div className="flex flex-wrap gap-3" role="group" aria-label="Chọn khung ảnh đại diện">
           {AVATAR_FRAMES.map((f) => (
             <button key={f.key} type="button" aria-pressed={frame === f.key} aria-label={f.label} title={f.label} onClick={() => setFrame(f.key)} className={`flex flex-col items-center gap-1 text-[11px] font-semibold ${frame === f.key ? 'text-blue-600' : 'text-slate-500'}`}>
@@ -95,8 +95,8 @@ export const EditProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card rounded-3xl p-5 sm:p-6 space-y-4">
-        <h3 className="font-bold text-sm text-slate-800">Liên kết mạng xã hội</h3>
+      <div className="card rounded-2xl p-5 sm:p-6 space-y-4">
+        <h3 className="section-title">Liên kết mạng xã hội</h3>
         <div className="grid sm:grid-cols-2 gap-4">
           {SOCIAL_PLATFORMS.map((p) => (
             <FormField key={p.key} label={p.label} icon={p.icon} type="url" inputMode="url" placeholder={p.placeholder} value={links[p.key]} onChange={(e) => setLinks((l) => ({ ...l, [p.key]: e.target.value }))} />
@@ -105,8 +105,8 @@ export const EditProfilePage: React.FC = () => {
         <p className="text-xs text-slate-500">Để trống nếu không muốn hiển thị. Liên kết phải bắt đầu bằng http:// hoặc https://.</p>
       </div>
 
-      <div className="card rounded-3xl p-5 sm:p-6 space-y-4">
-        <h3 className="font-bold text-sm text-slate-800">Thông tin cá nhân</h3>
+      <div className="card rounded-2xl p-5 sm:p-6 space-y-4">
+        <h3 className="section-title">Thông tin cá nhân</h3>
         <div className="grid sm:grid-cols-2 gap-4">
           <FormField label="Họ và tên" required value={form.name} onChange={(e) => setField('name', e.target.value)} />
           <FormField label="Tên người dùng (không đổi được)" disabled value={`@${currentUser?.username}`} className="text-slate-400" />
@@ -116,7 +116,7 @@ export const EditProfilePage: React.FC = () => {
           {textField('website', 'Website', 'https://...')}
         </div>
         <div>
-          <label htmlFor={bioId} className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+          <label htmlFor={bioId} className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
             Tiểu sử
           </label>
           <textarea id={bioId} rows={3} value={form.bio} onChange={(e) => setField('bio', e.target.value)} placeholder="Giới thiệu đôi nét về bạn..." className="input resize-none" />
@@ -125,10 +125,10 @@ export const EditProfilePage: React.FC = () => {
 
       {/* Nút lưu dính ở đáy màn hình khi cuộn; trên điện thoại xếp dọc, nút chính ở trên */}
       <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-        <Link to={`/profile/${currentUser?.id}`} className="btn-secondary px-6 py-3 text-center">
+        <Link to={`/profile/${currentUser?.id}`} className="btn-secondary px-6">
           Hủy bỏ
         </Link>
-        <button type="submit" disabled={saving || isUploading} className="btn-primary px-8 py-3 flex items-center justify-center gap-2">
+        <button type="submit" disabled={saving || isUploading} className="btn-primary px-8">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saving ? 'Đang lưu...' : isUploading ? 'Đang tải ảnh...' : 'Lưu thay đổi'}
         </button>

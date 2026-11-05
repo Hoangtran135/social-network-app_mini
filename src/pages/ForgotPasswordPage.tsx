@@ -28,7 +28,7 @@ export const ForgotPasswordPage: React.FC = () => {
         </SuccessMessage>
       ) : (
         <>
-          <h2 className="text-xl font-black text-slate-800 mb-2">Quên mật khẩu?</h2>
+          <h2 className="page-title mb-2">Quên mật khẩu?</h2>
           <p className="text-xs text-slate-500 mb-5">Nhập email đăng ký, chúng tôi sẽ gửi liên kết để đặt lại mật khẩu mới.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <FormField label="Email tài khoản" icon={Mail} type="email" required autoFocus autoComplete="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />

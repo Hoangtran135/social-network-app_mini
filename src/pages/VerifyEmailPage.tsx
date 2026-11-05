@@ -65,9 +65,9 @@ export const VerifyEmailPage: React.FC = () => {
       )}
       {state === 'invalid' && (
         <div className="text-center py-4 space-y-3">
-          <h3 className="text-lg font-bold text-slate-800">Liên kết không hợp lệ</h3>
+          <h3 className="page-title">Liên kết không hợp lệ</h3>
           <p className="text-xs text-slate-500">Liên kết xác minh bị thiếu thông tin. Hãy mở lại đúng liên kết trong email.</p>
-          <Link to="/" className="text-xs font-bold text-blue-600">
+          <Link to="/" className="text-xs font-semibold text-blue-600">
             Về trang chủ
           </Link>
         </div>

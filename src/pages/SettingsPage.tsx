@@ -14,7 +14,7 @@ const SettingsLink: React.FC<{ to: string; icon: LucideIcon; title: string; desc
         <Icon className="w-5 h-5" />
       </div>
       <div className="min-w-0">
-        <p className="font-bold text-slate-800 text-sm">{title}</p>
+        <p className="font-semibold text-slate-800 text-sm">{title}</p>
         <p className="text-xs text-slate-500">{description}</p>
       </div>
     </div>
@@ -47,16 +47,16 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-medium">
       <PageHeader icon={Settings} title="Cài đặt tài khoản" subtitle="Quản lý hồ sơ, mật khẩu và quyền riêng tư" />
 
-      <div className="card rounded-3xl overflow-hidden divide-y divide-slate-100 mb-5">
+      <div className="card rounded-2xl overflow-hidden divide-y divide-slate-100 mb-5">
         <SettingsLink to="/settings/profile" icon={UserIcon} title="Chỉnh sửa hồ sơ" description="Đổi ảnh đại diện, ảnh bìa, tên và thông tin cá nhân" />
         <SettingsLink to="/settings/blocked" icon={ShieldOff} title="Danh sách chặn" description="Quản lý những người dùng bạn đã chặn" />
       </div>
 
-      <div className="card rounded-3xl p-5 sm:p-6">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2 mb-1">
+      <div className="card rounded-2xl p-5 sm:p-6">
+        <h2 className="section-title flex items-center gap-2 mb-1">
           <KeyRound className="w-5 h-5 text-blue-600" /> Đổi mật khẩu
         </h2>
         <p className="text-xs text-slate-500 mb-4">Dùng mật khẩu mạnh, ít nhất 6 ký tự, và không dùng lại ở nơi khác.</p>

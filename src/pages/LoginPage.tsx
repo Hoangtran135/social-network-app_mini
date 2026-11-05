@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <AuthLayout subtitle="Kết nối, chia sẻ và lan tỏa khoảnh khắc cuộc sống">
-      <h2 className="text-xl font-black text-slate-800 mb-5">Đăng nhập tài khoản</h2>
+      <h2 className="page-title mb-5">Đăng nhập tài khoản</h2>
       <ErrorBox message={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField label="Email" icon={Mail} type="email" required autoFocus autoComplete="email" placeholder="name@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
@@ -54,7 +54,7 @@ export const LoginPage: React.FC = () => {
       </form>
       <p className="mt-6 text-center text-xs text-slate-500">
         Chưa có tài khoản?{' '}
-        <Link to="/register" className="text-blue-600 hover:underline font-bold">
+        <Link to="/register" className="text-blue-600 hover:underline font-semibold">
           Đăng ký ngay
         </Link>
       </p>

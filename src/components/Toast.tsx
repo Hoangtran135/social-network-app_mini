@@ -23,7 +23,7 @@ export const Toast: React.FC = () => {
         <Icon className="w-5 h-5 shrink-0" />
         <span className="min-w-0 break-words">{toast.message}</span>
         {toast.action && (
-          <button onClick={toast.action.onClick} className="pointer-events-auto ml-1 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold shrink-0">
+          <button onClick={toast.action.onClick} className="pointer-events-auto ml-1 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-semibold shrink-0">
             {toast.action.label}
           </button>
         )}

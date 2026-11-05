@@ -26,7 +26,7 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <AuthLayout subtitle="Tạo tài khoản mới và kết nối với bạn bè">
-      <h2 className="text-xl font-black text-slate-800 mb-5">Đăng ký tài khoản</h2>
+      <h2 className="page-title mb-5">Đăng ký tài khoản</h2>
       <ErrorBox message={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField label="Họ và tên" icon={UserIcon} required placeholder="Nguyễn Văn A" value={form.name} onChange={setField('name')} autoComplete="name" autoFocus />
@@ -47,7 +47,7 @@ export const RegisterPage: React.FC = () => {
       </form>
       <p className="mt-6 text-center text-xs text-slate-500">
         Đã có tài khoản?{' '}
-        <Link to="/login" className="text-blue-600 hover:underline font-bold">
+        <Link to="/login" className="text-blue-600 hover:underline font-semibold">
           Đăng nhập ngay
         </Link>
       </p>

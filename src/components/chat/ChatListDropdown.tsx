@@ -46,7 +46,7 @@ export const ChatListDropdown: React.FC<{ onClose: () => void }> = ({ onClose })
   return (
     <div className={`${DROPDOWN} sm:w-96`}>
       <div className="px-4 py-2 flex items-center justify-between">
-        <h3 className="font-bold text-slate-800">Đoạn chat</h3>
+        <h3 className="section-title">Đoạn chat</h3>
         <button onClick={() => setCreating(!creating)} title={creating ? 'Quay lại' : 'Tin nhắn mới'} aria-label={creating ? 'Quay lại danh sách' : 'Tin nhắn mới'} className="p-1.5 rounded-full bg-blue-600 text-white">
           <Plus className={`w-4 h-4 transition-transform ${creating ? 'rotate-45' : ''}`} />
         </button>
@@ -77,7 +77,7 @@ export const ChatListDropdown: React.FC<{ onClose: () => void }> = ({ onClose })
                 <div className="flex-1 min-w-0 text-xs">
                   <div className="flex justify-between gap-2">
                     <b className="truncate text-slate-800">{title}</b>
-                    <span className="text-[10px] text-slate-400 shrink-0">{timeAgo(c.lastMessage?.createdAt || c.updatedAt)}</span>
+                    <span className="text-[11px] text-slate-400 shrink-0">{timeAgo(c.lastMessage?.createdAt || c.updatedAt)}</span>
                   </div>
                   <p className={`truncate ${c.unreadCount > 0 ? 'text-slate-800 font-semibold' : 'text-slate-400'}`}>
                     {c.lastMessage

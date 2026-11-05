@@ -33,13 +33,13 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
     onClose();
   };
 
-  const choice = (active: boolean) => `flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`;
+  const choice = (active: boolean) => `flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-end sm:items-center justify-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Tạo tin mới" className="animate-pop bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[94dvh] overflow-y-auto overscroll-contain">
+      <div role="dialog" aria-modal="true" aria-label="Tạo tin mới" className="animate-pop bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[94dvh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-slate-800">Tạo tin / Story mới</h3>
+          <h3 className="section-title">Tạo tin / Story mới</h3>
           <button aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
             <X className="w-5 h-5" />
           </button>
@@ -57,7 +57,7 @@ export const CreateStoryModal: React.FC<{ onClose: () => void }> = ({ onClose })
         {/* Khung xem trước */}
         <div className={`mx-auto w-48 h-64 sm:w-56 sm:h-72 rounded-2xl flex items-center justify-center text-center text-white p-5 overflow-hidden ${type === 'text' ? `bg-gradient-to-br ${gradient}` : 'bg-slate-900'}`}>
           {type === 'text' ? (
-            <p className="font-bold break-words max-w-full">{text || 'Nội dung tin của bạn...'}</p>
+            <p className="font-semibold break-words max-w-full">{text || 'Nội dung tin của bạn...'}</p>
           ) : imageUrl ? (
             <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-xl" />
           ) : (

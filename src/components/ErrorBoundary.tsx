@@ -31,7 +31,7 @@ export class ErrorBoundary extends React.Component<Props, { failed: boolean }> {
         <div className="empty-icon !bg-rose-50 !text-rose-500">
           <AlertTriangle className="w-8 h-8" />
         </div>
-        <h3 className="text-base font-bold text-slate-800">Rất tiếc, đã có lỗi xảy ra</h3>
+        <h3 className="section-title">Rất tiếc, đã có lỗi xảy ra</h3>
         <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">Trang này gặp sự cố không mong muốn. Bạn thử tải lại trang, hoặc quay về trang chủ nhé.</p>
         <div className="flex gap-2 justify-center mt-5">
           <button onClick={() => window.location.reload()} className="btn-primary">

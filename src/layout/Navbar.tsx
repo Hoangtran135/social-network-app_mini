@@ -23,10 +23,10 @@ const NavIconLink: React.FC<{ to: string; title: string; icon: LucideIcon; activ
     title={title}
     aria-label={title}
     aria-current={active ? 'page' : undefined}
-    className={`relative p-2.5 sm:px-5 rounded-xl border-b-2 ${active ? 'text-blue-600 bg-blue-50 border-blue-600' : 'text-slate-600 border-transparent hover:bg-slate-100'}`}
+    className={`relative flex items-center justify-center h-10 w-14 lg:w-16 rounded-xl transition-colors after:absolute after:inset-x-2 after:-bottom-3 after:h-0.5 after:rounded-full ${active ? 'text-blue-600 bg-blue-50 after:bg-blue-600' : 'text-slate-600 hover:bg-slate-100 after:bg-transparent'}`}
   >
     <Icon className="w-5 h-5" />
-    <CountBadge count={badge} className="absolute top-0.5 right-1.5" />
+    <CountBadge count={badge} className="absolute -top-1 right-1 ring-2 ring-white" />
   </Link>
 );
 
@@ -36,10 +36,10 @@ const BadgeButton: React.FC<{ icon: LucideIcon; label: string; count: number; ac
     onClick={onClick}
     aria-label={label}
     aria-expanded={active}
-    className={`relative p-2 rounded-full ${active ? 'bg-blue-100 text-blue-600' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'}`}
+    className={`icon-btn ${active ? 'icon-btn--active' : ''}`}
   >
     <Icon className="w-5 h-5" />
-    <CountBadge count={count} className="absolute -top-1 -right-1" />
+    <CountBadge count={count} className="absolute -top-1 -right-1 ring-2 ring-white" />
   </button>
 );
 
@@ -64,23 +64,25 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-3">
-        <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="SocialNet - Trang chủ">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center text-white">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <span className="hidden md:block text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">SocialNet</span>
-        </Link>
+      {/* Lưới 3 cột (trái | giữa | phải): cụm Trang chủ / Bạn bè luôn nằm đúng giữa; trên điện thoại chỉ còn trái + phải */}
+      <div className="app-container h-16 flex sm:grid sm:grid-cols-[1fr_auto_1fr] items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="SocialNet - Trang chủ">
+            <div className="size-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center text-white">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <span className="hidden md:block text-xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">SocialNet</span>
+          </Link>
+          <SearchBox />
+        </div>
 
-        <SearchBox />
-
-        <nav aria-label="Điều hướng" className="hidden sm:flex items-center gap-2 mx-auto">
+        <nav aria-label="Điều hướng" className="hidden sm:flex items-center gap-1.5">
           <NavIconLink to="/" title="Trang chủ" icon={Home} active={pathname === '/'} />
           <NavIconLink to="/friends" title="Bạn bè" icon={Users} active={pathname.startsWith('/friends')} badge={friendRequests.length} />
         </nav>
 
-        <div ref={menusRef} className="flex items-center gap-2 sm:gap-3">
-          <button onClick={onOpenCreatePost} className="hidden lg:flex items-center gap-1.5 btn-primary rounded-full py-1.5">
+        <div ref={menusRef} className="flex items-center justify-end gap-2">
+          <button onClick={onOpenCreatePost} className="hidden lg:inline-flex btn-primary rounded-full pl-3.5 pr-4">
             <Plus className="w-4 h-4" /> Đăng bài
           </button>
 
@@ -95,7 +97,7 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
             {openMenu === 'notifications' && (
               <div className={`${DROPDOWN} sm:w-96 py-0`}>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
-                  <h3 className="font-bold text-slate-800">Thông báo</h3>
+                  <h3 className="section-title">Thông báo</h3>
                   <Link to="/notifications" onClick={() => setOpenMenu(null)} className="text-xs text-blue-600 hover:underline font-semibold">
                     Xem tất cả
                   </Link>
@@ -125,13 +127,13 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
           </div>
 
           <div className="sm:relative">
-            <button onClick={() => toggle('account')} aria-label="Tài khoản" aria-expanded={openMenu === 'account'} className="block rounded-full ring-2 ring-transparent hover:ring-blue-400">
-              <img src={currentUser?.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+            <button onClick={() => toggle('account')} aria-label="Tài khoản" aria-expanded={openMenu === 'account'} className="block size-10 rounded-full ring-2 ring-transparent hover:ring-blue-400 transition-shadow">
+              <img src={currentUser?.avatar} alt="" className="size-full rounded-full object-cover" />
             </button>
             {openMenu === 'account' && (
               <div className={`${DROPDOWN} sm:w-64`} onClick={() => setOpenMenu(null)}>
                 <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                  <div className="font-bold text-slate-800 text-sm truncate">{currentUser?.name}</div>
+                  <div className="font-semibold text-slate-800 text-sm truncate">{currentUser?.name}</div>
                   <div className="text-xs text-slate-400 truncate">@{currentUser?.username}</div>
                 </div>
                 <Link to={`/profile/${currentUser?.id}`} className={`${MENU_ITEM} text-slate-700`}>

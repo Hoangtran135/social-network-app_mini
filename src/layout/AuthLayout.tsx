@@ -18,17 +18,17 @@ export const AuthLayout: React.FC<{ subtitle: string; children: React.ReactNode 
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-violet-600 text-white shadow-xl mb-3">
           <Sparkles className="w-8 h-8" />
         </div>
-        <h1 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">SocialNet</h1>
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">SocialNet</h1>
         <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
       </div>
-      <div className="animate-pop bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">{children}</div>
+      <div className="animate-pop bg-white rounded-2xl p-6 sm:p-8 shadow-xl border border-slate-200/80">{children}</div>
     </div>
   </div>
   );
 };
 
 export const SubmitButton: React.FC<{ loading: boolean; children: React.ReactNode }> = ({ loading, children }) => (
-  <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2">
+  <button type="submit" disabled={loading} className="btn-primary w-full">
     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
     {children}
   </button>
@@ -40,14 +40,14 @@ export const ErrorBox: React.FC<{ message: string }> = ({ message }) =>
 export const SuccessMessage: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="text-center py-4 space-y-3">
     <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-    <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+    <h3 className="page-title">{title}</h3>
     <p className="text-xs text-slate-600">{children}</p>
   </div>
 );
 
 export const BackToLogin: React.FC = () => (
   <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-    <Link to="/login" className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-blue-600 font-bold">
+    <Link to="/login" className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-blue-600 font-semibold">
       <ArrowLeft className="w-4 h-4" />
       Quay lại trang đăng nhập
     </Link>

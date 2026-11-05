@@ -53,21 +53,23 @@ export const FeedPage: React.FC = () => {
   if (sort === 'top') visiblePosts.sort((a, b) => postScore(b) - postScore(a) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="max-w-2xl">
+    <div className="page-narrow">
       <StoryBar />
       <CreatePostBox onClick={openCreatePost} />
 
-      <div className="card p-2 mb-5 flex items-center gap-1 overflow-x-auto no-scrollbar" role="group" aria-label="Lọc bài viết">
-        <TabButton active={filter === 'all'} onClick={() => setFilter('all')}>
-          Tất cả bài viết
-        </TabButton>
-        <TabButton active={filter === 'friends'} onClick={() => setFilter('friends')}>
-          Bạn bè
-        </TabButton>
-        <TabButton active={filter === 'following'} onClick={() => setFilter('following')}>
-          Đang theo dõi
-        </TabButton>
-        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sắp xếp bảng tin" className="ml-auto shrink-0 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg px-2.5 py-2">
+      <div className="card p-2 mb-5 flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-fade-x" role="group" aria-label="Lọc bài viết">
+          <TabButton active={filter === 'all'} onClick={() => setFilter('all')}>
+            Tất cả bài viết
+          </TabButton>
+          <TabButton active={filter === 'friends'} onClick={() => setFilter('friends')}>
+            Bạn bè
+          </TabButton>
+          <TabButton active={filter === 'following'} onClick={() => setFilter('following')}>
+            Đang theo dõi
+          </TabButton>
+        </div>
+        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sắp xếp bảng tin" className="shrink-0 h-9 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl px-3 transition-colors">
           <option value="newest">Mới nhất</option>
           <option value="top">Nổi bật</option>
         </select>
