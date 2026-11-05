@@ -85,8 +85,8 @@ messagesRouter.get('/conversations', async (req, res) => {
   const result = await Promise.all(
     conversations.map(async (c: Doc) => {
       const [last, unread] = await Promise.all([
-        MessageModel.findOne({ conversation: c._id }).sort({ createdAt: -1 }).populate('sender'),
-        MessageModel.countDocuments({ conversation: c._id, sender: { $ne: req.userId }, readBy: { $ne: req.userId } }),
+        MessageModel.findOne({ conversation: c._id, deletedFor: { $ne: req.userId } }).sort({ createdAt: -1 }).populate('sender'),
+        MessageModel.countDocuments({ conversation: c._id, sender: { $ne: req.userId }, readBy: { $ne: req.userId }, deletedFor: { $ne: req.userId } }),
       ]);
       return conversationToJson(c, last, unread);
     })
@@ -145,7 +145,7 @@ messagesRouter.patch('/conversations/:id/nickname', validate(setNicknameSchema),
 
 /** Lấy tin nhắn của hội thoại */
 messagesRouter.get('/conversations/:id/messages', requireMember, async (req, res) => {
-  const messages = await MessageModel.find({ conversation: req.params.id }).sort({ createdAt: 1 }).limit(500).populate('sender');
+  const messages = await MessageModel.find({ conversation: req.params.id, deletedFor: { $ne: req.userId } }).sort({ createdAt: 1 }).limit(500).populate('sender');
   await MessageModel.updateMany({ conversation: req.params.id, sender: { $ne: req.userId } }, { $addToSet: { readBy: req.userId } });
   const ids = getMemberIds(res.locals.conv);
   res.json({ messages: messages.map((m: Doc) => messageToJson(m, ids)) });
@@ -170,6 +170,14 @@ messagesRouter.delete('/conversations/:id/messages/:messageId', requireMember, a
 
   Object.assign(message, { isRecalled: true, content: '', attachments: [], reactions: new Map() });
   await saveMessageAndBroadcast(res, message);
+});
+
+/** "Xóa với tôi": ẩn tin nhắn khỏi phía mình, người khác vẫn thấy (khác với thu hồi) */
+messagesRouter.post('/conversations/:id/messages/:messageId/delete-for-me', requireMember, async (req, res) => {
+  const message = await findMessage(req);
+  if (!message) return res.status(404).json({ error: 'Không tìm thấy tin nhắn.' });
+  await MessageModel.updateOne({ _id: message._id }, { $addToSet: { deletedFor: req.userId } });
+  res.json({ ok: true });
 });
 
 /** Thả cảm xúc tin nhắn */

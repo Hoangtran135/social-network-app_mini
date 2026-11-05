@@ -12,6 +12,10 @@ const messageSchema = new Schema(
     sharedPostId: { type: Schema.Types.ObjectId, ref: 'Post' },
     attachments: [{ type: { type: String, enum: ['image', 'file'] }, url: String, name: String, size: String, _id: false }],
     readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // Những người đã NHẬN được tin (thiết bị của họ đã báo về qua socket) — chưa chắc đã xem
+    deliveredTo: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // Những người đã chọn "Xóa với tôi": tin ẩn với họ nhưng người khác vẫn thấy
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // Thu hồi = không xoá bản ghi, chỉ đánh dấu và xoá nội dung
     isRecalled: { type: Boolean, default: false },
     // Cảm xúc: { idNgườiDùng: "emoji" } — mỗi người một cảm xúc

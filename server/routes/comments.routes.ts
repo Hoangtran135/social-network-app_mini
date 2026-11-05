@@ -1,14 +1,15 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { CommentModel } from '../models/Comment';
 import { PostModel } from '../models/Post';
 import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
-import { validate, createCommentSchema } from '../validation';
+import { validate, createCommentSchema, updateCommentSchema, reactPostSchema } from '../validation';
 import { commentToJson, getId, Doc } from '../formatResponse';
 import { emitToUser } from '../socketServer';
 import { getFriendAndBlockedIds, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
 
-// API bình luận (/api/comments): xem, thêm (hoặc trả lời), xoá, thích bình luận.
+// API bình luận (/api/comments): xem, thêm (hoặc trả lời), sửa, xoá, thả cảm xúc (like / love / haha / wow / sad / angry).
 // Chỉ ai xem được bài viết mới được xem / bình luận / thích bình luận trong bài đó.
 
 export const commentsRouter = Router();
@@ -41,6 +42,7 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   const me = req.userId;
   const post = await PostModel.findById(postId);
   if (!post || !(await canViewPost(post, me))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (post.commentsDisabled) return res.status(403).json({ error: 'Chủ bài viết đã tắt bình luận.' });
 
   if (parentId) {
     const parent = await CommentModel.findById(parentId).select('post');
@@ -88,15 +90,53 @@ commentsRouter.delete('/:id', async (req, res) => {
   if (post) emitToAllowedViewers(post.privacy, post.author.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, req.userId);
 });
 
-/** Thích / bỏ thích bình luận */
-commentsRouter.post('/:id/like', async (req, res) => {
+/** Sửa nội dung bình luận (chỉ tác giả). Bình luận chỉ có ảnh thì được để trống chữ. */
+commentsRouter.patch('/:id', validate(updateCommentSchema), async (req, res) => {
+  const comment = await CommentModel.findById(req.params.id);
+  if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });
+  if (comment.author.toString() !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền sửa bình luận này.' });
+  if (!req.body.content && !comment.image) return res.status(400).json({ error: 'Bình luận không được để trống.' });
+
+  comment.content = req.body.content;
+  comment.editedAt = new Date();
+  await comment.save();
+  await comment.populate(['author', 'taggedUsers']);
+  res.json({ comment: commentToJson(comment) });
+});
+
+/** Áp dụng cảm xúc lên bình luận: cùng loại với cảm xúc hiện tại thì bỏ, khác loại thì đổi, chưa có thì thêm. */
+async function reactToComment(req: Request, res: Response, type: string) {
   const comment = await CommentModel.findById(req.params.id);
   if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });
   const post = await PostModel.findById(comment.post).select('author privacy');
   if (post && !(await canViewPost(post, req.userId))) return res.status(403).json({ error: 'Bạn không có quyền tương tác với bình luận này.' });
 
-  const liked = comment.likes.some((id: Doc) => id.toString() === req.userId);
-  await CommentModel.updateOne({ _id: comment._id }, liked ? { $pull: { likes: req.userId } } : { $addToSet: { likes: req.userId } });
+  // MỘT cập nhật nguyên tử (pipeline) trên cả likes và reactions: cùng loại với cảm xúc hiện tại thì bỏ, khác loại thì đổi, chưa có thì thêm.
+  const me = new mongoose.Types.ObjectId(req.userId);
+  const likes = { $ifNull: ['$likes', []] };
+  const reactions = { $ifNull: ['$reactions', []] };
+  const myOtherTypes = { $map: { input: { $filter: { input: reactions, cond: { $eq: ['$$this.userId', me] } } }, as: 'r', in: '$$r.type' } };
+  const isSame = type === 'like' ? { $in: [me, likes] } : { $in: [type, myOtherTypes] };
+  const otherLikes = { $filter: { input: likes, cond: { $ne: ['$$this', me] } } };
+  const otherReactions = { $filter: { input: reactions, cond: { $ne: ['$$this.userId', me] } } };
+  await CommentModel.updateOne(
+    { _id: comment._id },
+    [
+      {
+        $set: {
+          likes: { $cond: [{ $or: [isSame, { $ne: [type, 'like'] }] }, otherLikes, { $concatArrays: [otherLikes, [me]] }] },
+          reactions: { $cond: [{ $or: [isSame, { $eq: [type, 'like'] }] }, otherReactions, { $concatArrays: [otherReactions, [{ type, userId: me }]] }] },
+        },
+      },
+    ],
+    { updatePipeline: true }
+  );
   const fresh = await CommentModel.findById(comment._id).populate('author');
   res.json({ comment: commentToJson(fresh) });
-});
+}
+
+/** Thích / bỏ thích bình luận */
+commentsRouter.post('/:id/like', (req, res) => reactToComment(req, res, 'like'));
+
+/** Thả / đổi / bỏ cảm xúc bình luận */
+commentsRouter.post('/:id/react', validate(reactPostSchema), (req, res) => reactToComment(req, res, req.body.type));

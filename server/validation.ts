@@ -35,9 +35,18 @@ export const registerSchema = z.object({
   password: newPassword,
 });
 export const loginSchema = z.object({ email, password: z.string().min(1).max(200) });
+export const verifyEmailSchema = z.object({ email, token: z.string().min(1).max(500) });
 export const forgotPasswordSchema = z.object({ email });
 export const resetPasswordSchema = z.object({ email, token: z.string().min(1).max(500), password: newPassword });
 export const changePasswordSchema = z.object({ currentPassword: z.string().min(1).max(200), newPassword });
+export const AVATAR_FRAMES = ['none', 'blue', 'green', 'rose', 'gold', 'rainbow'] as const;
+export const SOCIAL_PLATFORMS = ['facebook', 'github', 'linkedin', 'twitter', 'instagram', 'youtube', 'tiktok'] as const;
+// Liên kết mạng xã hội: để trống (xoá) hoặc BẮT BUỘC bắt đầu bằng http(s):// — chặn "javascript:" và các giao thức nguy hiểm khác vì liên kết được đưa vào thẻ <a href>
+const socialUrl = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((v) => v === '' || /^https?:\/\/[^\s<>"']+$/i.test(v), 'Liên kết phải bắt đầu bằng http:// hoặc https://');
 export const updateProfileSchema = z.object({
   name: text(100).min(1).optional(),
   bio: text(500).optional(),
@@ -47,6 +56,8 @@ export const updateProfileSchema = z.object({
   education: text(150).optional(),
   location: text(150).optional(),
   website: text(300).optional(),
+  avatarFrame: z.enum(AVATAR_FRAMES).optional(),
+  socialLinks: z.object(Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p, socialUrl.optional()])) as Record<(typeof SOCIAL_PLATFORMS)[number], z.ZodOptional<typeof socialUrl>>).optional(),
 });
 
 // ----- Bài viết -----
@@ -66,6 +77,7 @@ export const updatePostSchema = z.object({
   feeling: text(100).optional(),
   images: z.array(url).max(20).optional(),
   video: url.optional(),
+  location: text(200).optional(),
 });
 export const reactPostSchema = z.object({ type: z.enum(['like', 'love', 'haha', 'wow', 'sad', 'angry']) });
 export const sharePostSchema = z.object({ message: text(2000).optional() });
@@ -78,6 +90,9 @@ export const createCommentSchema = z.object({
   parentId: id.optional(),
   taggedUserIds: z.array(id).max(50).optional(),
 });
+export const updateCommentSchema = z.object({ content: text(3000) });
+export const STORY_EMOJIS = ['❤️', '🔥', '👏', '😮', '😂'] as const;
+export const reactStorySchema = z.object({ emoji: z.enum(STORY_EMOJIS) });
 export const createStorySchema = z.object({
   type: z.enum(['image', 'text']),
   mediaUrl: url.optional(),

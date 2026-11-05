@@ -16,11 +16,26 @@ const userSchema = new Schema(
     education: String,
     location: String,
     website: String,
+    // Khung quanh ảnh đại diện (none = không khung) và liên kết mạng xã hội hiển thị trên hồ sơ
+    avatarFrame: { type: String, enum: ['none', 'blue', 'green', 'rose', 'gold', 'rainbow'], default: 'none' },
+    socialLinks: {
+      facebook: String,
+      github: String,
+      linkedin: String,
+      twitter: String,
+      instagram: String,
+      youtube: String,
+      tiktok: String,
+    },
     isOnline: { type: Boolean, default: false },
     lastActive: Date,
     // Dùng cho "Quên mật khẩu": bản băm của mã trong email và thời điểm mã hết hạn
     resetTokenHash: String,
     resetTokenExpires: Date,
+    // Xác minh email: tài khoản cũ (chưa có trường này) coi như đã xác minh; tài khoản mới đăng ký bắt đầu với false
+    emailVerified: { type: Boolean, default: true },
+    verifyTokenHash: String,
+    verifyTokenExpires: Date,
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   // Tự lưu thời điểm tạo tài khoản vào trường joinDate

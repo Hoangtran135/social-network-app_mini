@@ -11,6 +11,8 @@ const storySchema = new Schema(
     textContent: String,
     backgroundGradient: String,
     expiresAt: { type: Date, required: true },
+    // Cảm xúc nhanh của người xem (mỗi người một emoji)
+    reactions: [{ user: { type: Schema.Types.ObjectId, ref: 'User' }, emoji: String, reactedAt: { type: Date, default: Date.now }, _id: false }],
     viewers: [{ user: { type: Schema.Types.ObjectId, ref: 'User' }, viewedAt: { type: Date, default: Date.now }, _id: false }],
   },
   { timestamps: { createdAt: true, updatedAt: false } }

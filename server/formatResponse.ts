@@ -29,6 +29,9 @@ export function userToJson(u: Doc) {
     education: u.education,
     location: u.location,
     website: u.website,
+    avatarFrame: u.avatarFrame || 'none',
+    // Chỉ trả các liên kết có giá trị
+    socialLinks: Object.fromEntries(Object.entries(u.socialLinks?.toObject?.() ?? u.socialLinks ?? {}).filter(([, v]) => typeof v === 'string' && v)),
     joinDate: isoDate(u.joinDate),
     friendsCount: u.friendsCount ?? 0,
     isOnline: u.isOnline,
@@ -39,7 +42,7 @@ export function userToJson(u: Doc) {
 /** Thông tin của chính mình: như trên + danh sách người mình đã chặn. */
 export function meToJson(u: Doc) {
   const base = userToJson(u);
-  return base && { ...base, blockedUserIds: (u.blockedUsers || []).map(getId) };
+  return base && { ...base, blockedUserIds: (u.blockedUsers || []).map(getId), emailVerified: u.emailVerified !== false };
 }
 
 /** viewerId: người đang xem, để biết họ đã lưu bài này chưa (isSaved). */
@@ -58,6 +61,9 @@ export function postToJson(p: Doc, viewerId?: string) {
     taggedUsers: (p.taggedUsers || []).map(userToJson).filter(Boolean),
     createdAt: p.createdAt,
     updatedAt: p.editedAt,
+    editHistory: notEmpty((p.editHistory || []).map((h: Doc) => ({ content: h.content, editedAt: h.editedAt }))),
+    hashtags: notEmpty(p.hashtags),
+    commentsDisabled: !!p.commentsDisabled,
     reactions: (p.reactions || []).map((r: Doc) => ({ type: r.type, userId: getId(r.userId), userName: r.userId?.name })),
     commentsCount: p.commentsCount || 0,
     sharesCount: p.sharesCount || 0,
@@ -76,6 +82,12 @@ export function commentToJson(c: Doc) {
     taggedUsers: (c.taggedUsers || []).map(userToJson).filter(Boolean),
     createdAt: c.createdAt,
     likes: (c.likes || []).map(getId),
+    // Gộp "thích" và các cảm xúc khác thành một danh sách: [{ type, userId }]
+    reactions: [
+      ...(c.likes || []).map((id: Doc) => ({ type: 'like', userId: getId(id) })),
+      ...(c.reactions || []).map((r: Doc) => ({ type: r.type, userId: getId(r.userId) })),
+    ],
+    editedAt: c.editedAt,
     parentId: c.parent ? getId(c.parent) : undefined,
   };
 }
@@ -91,6 +103,7 @@ export function storyToJson(s: Doc) {
     backgroundGradient: s.backgroundGradient,
     createdAt: s.createdAt,
     expiresAt: s.expiresAt,
+    reactions: (s.reactions || []).map((r: Doc) => ({ userId: getId(r.user), userName: r.user?.name, avatar: r.user?.avatar, emoji: r.emoji })),
     viewers: (s.viewers || []).map((v: Doc) => ({
       userId: getId(v.user),
       userName: v.user?.name,
@@ -154,6 +167,7 @@ export function messageToJson(m: Doc, participantIds: string[] = []) {
     attachments: notEmpty(m.attachments),
     sharedPostId: m.sharedPostId ? getId(m.sharedPostId) : undefined,
     createdAt: m.createdAt,
+    deliveredTo: (m.deliveredTo || []).map(getId),
     isRead: participantIds.filter((pid) => pid !== senderId).every((pid) => readBy.has(pid)),
     isRecalled: !!m.isRecalled,
     reactions: m.reactions?.size > 0 ? Object.fromEntries(m.reactions) : undefined,

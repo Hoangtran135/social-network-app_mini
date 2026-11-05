@@ -34,7 +34,7 @@ export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}) 
     const tooMany = { error: "Quá nhiều yêu cầu, vui lòng thử lại sau." };
     app.use("/api", rateLimit({ windowMs: 60 * 1000, limit: 300, message: tooMany }));
     const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, message: tooMany });
-    app.use(["/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password"], authLimiter);
+    app.use(["/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-email", "/api/auth/resend-verification"], authLimiter);
   }
 
   // Các nhóm API — vd authRouter.post('/login') sẽ thành POST /api/auth/login

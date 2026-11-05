@@ -4,14 +4,26 @@ import crypto from 'crypto';
 import { UserModel } from '../models/User';
 import { createToken, requireAuth } from '../jwtAuth';
 import { meToJson } from '../formatResponse';
-import { sendPasswordResetEmail } from '../email';
-import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../validation';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../email';
+import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema } from '../validation';
 
 // API tài khoản (/api/auth): đăng ký, đăng nhập, quên / đặt lại mật khẩu, đăng xuất, lấy thông tin của mình.
 
 export const authRouter = Router();
 
 const sha256 = (text: string) => crypto.createHash('sha256').update(text).digest('hex');
+
+/** Tạo mã xác minh mới cho user (lưu bản băm, hạn 24 giờ) rồi gửi email chứa link. Lỗi gửi mail chỉ ghi log, không làm hỏng việc đăng ký. */
+async function issueVerification(user: { email: string; verifyTokenHash?: string; verifyTokenExpires?: Date; save: () => Promise<unknown> }, origin: string) {
+  const token = crypto.randomBytes(32).toString('hex');
+  user.verifyTokenHash = sha256(token);
+  user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await user.save();
+  const verifyUrl = `${origin}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
+  await sendVerificationEmail(user.email, verifyUrl).catch((err) => console.error('Gửi email xác minh thất bại:', err));
+}
+
+const originOf = (req: { headers: { origin?: string }; protocol: string; get: (name: string) => string | undefined }) => req.headers.origin || `${req.protocol}://${req.get('host')}`;
 
 /** Đăng ký tài khoản */
 authRouter.post('/register', validate(registerSchema), async (req, res) => {
@@ -27,7 +39,9 @@ authRouter.post('/register', validate(registerSchema), async (req, res) => {
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
     bio: 'Thành viên mới của mạng xã hội 👋',
     isOnline: true,
+    emailVerified: false,
   });
+  await issueVerification(user, originOf(req));
   res.json({ token: createToken(user.id), user: meToJson(user) });
 });
 
@@ -69,6 +83,30 @@ authRouter.post('/reset-password', validate(resetPasswordSchema), async (req, re
   user.resetTokenHash = undefined;
   user.resetTokenExpires = undefined;
   await user.save();
+  res.json({ ok: true });
+});
+
+/** Xác minh email bằng mã trong link. Đã xác minh rồi thì trả ok (bấm link lần 2 không lỗi). */
+authRouter.post('/verify-email', validate(verifyEmailSchema), async (req, res) => {
+  const { email, token } = req.body;
+  const user = await UserModel.findOne({ email: email.toLowerCase() });
+  if (user?.emailVerified !== false && user) return res.json({ ok: true });
+  const valid = user?.verifyTokenHash === sha256(token) && user.verifyTokenExpires?.getTime() > Date.now();
+  if (!valid) return res.status(400).json({ error: 'Liên kết xác minh không hợp lệ hoặc đã hết hạn.' });
+
+  user.emailVerified = true;
+  user.verifyTokenHash = undefined;
+  user.verifyTokenExpires = undefined;
+  await user.save();
+  res.json({ ok: true });
+});
+
+/** Gửi lại email xác minh (người đang đăng nhập) */
+authRouter.post('/resend-verification', requireAuth, async (req, res) => {
+  const user = await UserModel.findById(req.userId);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+  if (user.emailVerified !== false) return res.status(400).json({ error: 'Email này đã được xác minh.' });
+  await issueVerification(user, originOf(req));
   res.json({ ok: true });
 });
 

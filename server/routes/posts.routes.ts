@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import { PostModel } from '../models/Post';
 import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
@@ -7,8 +8,10 @@ import { postToJson, getId, Doc } from '../formatResponse';
 import { getFriendAndBlockedIds, getFriendIds, isBlockedBetween, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
 import { UserModel } from '../models/User';
 import { pageParams } from '../pagination';
+import { extractHashtags, normalizeTag } from '../hashtags';
 
-// API bài viết (/api/posts): bảng tin, kỷ niệm, đăng / sửa / xoá bài, thả cảm xúc, ghim, lưu, chia sẻ.
+// API bài viết (/api/posts): bảng tin (lọc theo #hashtag, bỏ bài đã ẩn), kỷ niệm, đăng / sửa (có lịch sử) / xoá bài,
+// thả cảm xúc, ghim, lưu, chia sẻ, tắt / bật bình luận, ẩn / hiện lại bài.
 // Mọi thay đổi đều được đẩy realtime tới những người được xem bài (post:new / post:update / post:delete).
 
 export const postsRouter = Router();
@@ -27,10 +30,16 @@ async function findPostIfVisible(id: string, userId: string) {
   return post && (await canView(getId(post.author), userId, post.privacy)) ? post : null;
 }
 
-/** Lấy bảng tin */
+/** Lấy bảng tin. ?tag=<hashtag> chỉ lấy bài có hashtag đó. Bài mình đã ẩn không hiện. */
 postsRouter.get('/', async (req, res) => {
   const { limit, skip } = pageParams(req.query, 30);
-  const posts = await PostModel.find().sort({ createdAt: -1 }).limit(limit).skip(skip).populate(POPULATE);
+  const filter: Record<string, unknown> = { hiddenBy: { $ne: req.userId } };
+  if (req.query.tag !== undefined) {
+    const tag = normalizeTag(req.query.tag);
+    if (!tag) return res.json({ posts: [] }); // tag rác → không có bài nào (không lỗi, không trả toàn bộ bảng tin)
+    filter.hashtags = tag;
+  }
+  const posts = await PostModel.find(filter).sort({ createdAt: -1 }).limit(limit).skip(skip).populate(POPULATE);
   const { friendIds, blockedIds } = await getFriendAndBlockedIds(req.userId);
   const visible = posts.filter((p: Doc) => canViewContent(getId(p.author), req.userId, p.privacy, friendIds, blockedIds));
   res.json({ posts: visible.map((p: Doc) => postToJson(p, req.userId)) });
@@ -67,7 +76,7 @@ postsRouter.post('/', validate(createPostSchema), async (req, res) => {
   }
   const tagged: string[] = [...new Set<string>(taggedUserIds)].filter((id) => id !== me);
 
-  const post = await PostModel.create({ ...fields, author: me, wallOwner, taggedUsers: tagged });
+  const post = await PostModel.create({ ...fields, author: me, wallOwner, taggedUsers: tagged, hashtags: extractHashtags(fields.content) });
   await post.populate(POPULATE);
 
   const target = { targetId: post.id, targetType: 'post' as const };
@@ -84,6 +93,11 @@ postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   if (post.author.toString() !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền sửa bài viết này.' });
 
+  // Nội dung đổi thì lưu phiên bản cũ vào lịch sử (tối đa 20 phiên bản gần nhất) và tính lại hashtag
+  if (req.body.content !== undefined && req.body.content !== post.content) {
+    post.editHistory = [...(post.editHistory || []), { content: post.content, editedAt: new Date() }].slice(-20);
+    post.hashtags = extractHashtags(req.body.content);
+  }
   Object.assign(post, req.body, { editedAt: new Date() });
   await post.save();
   await post.populate(POPULATE);
@@ -110,13 +124,19 @@ postsRouter.delete('/:id', async (req, res) => {
     if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
     const _id = post._id;
-    const removed = await PostModel.findOneAndUpdate(
-      { _id, reactions: { $elemMatch: { userId: me, type } } },
-      { $pull: { reactions: { userId: me } } }
+    // MỘT cập nhật nguyên tử (pipeline): cùng loại thì bỏ, khác loại thì thay, chưa có thì thêm. Nhiều request song song của cùng một người
+    // được MongoDB xử lý lần lượt trên tài liệu, nên không bao giờ có hơn 1 cảm xúc của một người (kiểu "đọc rồi ghi" nhiều bước thì có).
+    const meId = new mongoose.Types.ObjectId(me);
+    const all = { $ifNull: ['$reactions', []] };
+    const others = { $filter: { input: all, cond: { $ne: ['$$this.userId', meId] } } };
+    const myTypes = { $map: { input: { $filter: { input: all, cond: { $eq: ['$$this.userId', meId] } } }, as: 'r', in: '$$r.type' } };
+    const before = await PostModel.findOneAndUpdate(
+      { _id },
+      [{ $set: { reactions: { $cond: [{ $in: [type, myTypes] }, others, { $concatArrays: [others, [{ type, userId: meId }]] }] } } }],
+      { updatePipeline: true, returnDocument: 'before' }
     );
-    const changed = !removed && (await PostModel.findOneAndUpdate({ _id, 'reactions.userId': me }, { $set: { 'reactions.$.type': type } }));
-    if (!removed && !changed) {
-      await PostModel.updateOne({ _id }, { $push: { reactions: { type, userId: me } } });
+    const hadReaction = (before?.reactions || []).some((r: Doc) => r.userId.toString() === me);
+    if (!hadReaction) {
       const authorId = getId(post.author);
       if (authorId !== me) {
         await createNotification({ user: authorId, actor: me, type: 'like', content: `đã thả cảm xúc (${type}) về bài viết của bạn`, targetId: post.id, targetType: 'post' });
@@ -138,6 +158,34 @@ postsRouter.post('/:id/pin', async (req, res) => {
   await post.save();
   res.json({ post: postToJson(post, req.userId) });
   emitPostToViewers(post, 'post:update');
+});
+
+/** Tắt / bật bình luận (chỉ chủ bài) */
+postsRouter.post('/:id/toggle-comments', async (req, res) => {
+  const post = await PostModel.findById(req.params.id).populate(POPULATE);
+  if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (getId(post.author) !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền tắt bình luận của bài viết này.' });
+
+  post.commentsDisabled = !post.commentsDisabled;
+  await post.save();
+  res.json({ post: postToJson(post, req.userId) });
+  emitPostToViewers(post, 'post:update');
+});
+
+/** Ẩn bài khỏi bảng tin của mình ("không quan tâm"). Không ảnh hưởng người khác. */
+postsRouter.post('/:id/hide', async (req, res) => {
+  const post = await findPostIfVisible(req.params.id, req.userId);
+  if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  await PostModel.updateOne({ _id: post._id }, { $addToSet: { hiddenBy: req.userId } });
+  res.json({ ok: true });
+});
+
+/** Hiện lại bài đã ẩn (hoàn tác) */
+postsRouter.delete('/:id/hide', async (req, res) => {
+  const post = await PostModel.findById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  await PostModel.updateOne({ _id: post._id }, { $pull: { hiddenBy: req.userId } });
+  res.json({ ok: true });
 });
 
 /** Lưu / bỏ lưu bài viết */
@@ -166,6 +214,7 @@ postsRouter.post('/:id/share', validate(sharePostSchema), async (req, res) => {
     images: original.images,
     // Không làm rộng quyền xem: bài gốc chỉ-bạn-bè thì bài chia sẻ cũng chỉ bạn bè của người chia sẻ xem được
     privacy: original.privacy === 'public' ? 'public' : 'friends',
+    hashtags: extractHashtags(req.body.message ? `${req.body.message}\n\n${quote}` : quote),
   });
   await shared.populate(POPULATE);
   res.json({ post: postToJson(shared, req.userId) });
