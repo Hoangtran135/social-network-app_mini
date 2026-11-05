@@ -6,7 +6,7 @@ import { useChatWindows } from '../context/ChatWindowsContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { User } from '../types';
 import { api } from '../utils/api';
-import { PageHeader, EmptyState, TabButton } from '../components/ui';
+import { PageHeader, EmptyState, ErrorState, ListSkeleton, TabButton } from '../components/ui';
 
 // Trang bạn bè (/friends) có 3 tab:
 // - Bạn bè: tìm theo tên, nhắn tin, huỷ kết bạn
@@ -33,7 +33,7 @@ const UserCard: React.FC<{ user: User; note?: string; actions: React.ReactNode }
 const Grid: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div>;
 
 export const FriendsPage: React.FC = () => {
-  const { friends, friendRequests, sentFriendRequests, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend, sendFriendRequest, getOrCreateConversation } =
+  const { friendsStatus, reloadFriends, friends, friendRequests, sentFriendRequests, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend, sendFriendRequest, getOrCreateConversation } =
     useSocial();
   const { openChat } = useChatWindows();
   const confirm = useConfirm();
@@ -73,7 +73,10 @@ export const FriendsPage: React.FC = () => {
         )}
       </div>
 
-      {tab === 'friends' && (
+      {friendsStatus === 'loading' && <ListSkeleton count={4} />}
+      {friendsStatus === 'error' && <ErrorState title="Không tải được danh sách bạn bè" onRetry={reloadFriends} />}
+
+      {friendsStatus === 'ready' && tab === 'friends' && (
         <>
           {shownFriends.length === 0 && (
             <EmptyState
@@ -110,7 +113,7 @@ export const FriendsPage: React.FC = () => {
         </>
       )}
 
-      {tab === 'requests' && (
+      {friendsStatus === 'ready' && tab === 'requests' && (
         <>
           {friendRequests.length === 0 && sentFriendRequests.length === 0 && <EmptyState icon={UserPlus} title="Không có lời mời kết bạn nào" description="Khi có người gửi lời mời, bạn sẽ thấy ở đây." />}
           {friendRequests.length > 0 && <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Lời mời đã nhận ({friendRequests.length})</h3>}

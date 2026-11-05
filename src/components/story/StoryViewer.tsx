@@ -11,7 +11,7 @@ import { timeAgo } from '../../utils/format';
 // (gửi thành tin nhắn cho người đăng).
 
 export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> = ({ startIndex, onClose }) => {
-  const { stories, viewStory, deleteStory, sendMessage, getOrCreateConversation, showToast } = useSocial();
+  const { stories, viewStory, reactToStory, deleteStory, sendMessage, getOrCreateConversation, showToast } = useSocial();
   const { currentUser } = useAuth();
   const confirm = useConfirm();
   const [index, setIndex] = useState(startIndex);
@@ -25,6 +25,7 @@ export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> 
 
   const story = stories[index];
   const isMine = story?.user.id === currentUser?.id;
+  const myEmoji = story?.reactions?.find((r) => r.userId === currentUser?.id)?.emoji;
   const next = () => (index < stories.length - 1 ? setIndex(index + 1) : onClose());
   const prev = () => index > 0 && setIndex(index - 1);
 
@@ -122,12 +123,18 @@ export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> 
               <button onClick={() => setShowViewers(!showViewers)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-full text-xs font-bold">
                 <Eye className="w-4 h-4" /> {story.viewers.length} người đã xem
               </button>
+              {!!story.reactions?.length && (
+                <p className="text-sm" title="Cảm xúc nhận được">
+                  {story.reactions.map((r) => r.emoji).join(' ')} <span className="text-xs text-white/70">· {story.reactions.length} cảm xúc</span>
+                </p>
+              )}
               {showViewers && story.viewers.length === 0 && <p className="text-xs text-white/60">Chưa có ai xem tin này.</p>}
               {showViewers &&
                 story.viewers.map((v) => (
                   <div key={v.userId} className="flex items-center gap-2 text-xs">
                     <img src={v.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
                     {v.userName}
+                    {story.reactions?.find((r) => r.userId === v.userId) && <span>{story.reactions.find((r) => r.userId === v.userId)!.emoji}</span>}
                     <span className="ml-auto text-white/60">{timeAgo(v.viewedAt)}</span>
                   </div>
                 ))}
@@ -136,7 +143,13 @@ export const StoryViewer: React.FC<{ startIndex: number; onClose: () => void }> 
             <>
               <div className="flex justify-around text-2xl">
                 {['❤️', '🔥', '👏', '😮', '😂'].map((emoji) => (
-                  <button key={emoji} aria-label={`Phản hồi ${emoji}`} onClick={() => messageAuthor(`Đã phản hồi Story của bạn: ${emoji}`)} className="p-1 hover:scale-125 transition-transform">
+                  <button
+                    key={emoji}
+                    aria-label={`Phản hồi ${emoji}`}
+                    aria-pressed={myEmoji === emoji}
+                    onClick={async () => (await reactToStory(story.id, emoji)) && showToast(`Đã gửi cảm xúc ${emoji} tới ${story.user.name}`)}
+                    className={`p-1 rounded-full hover:scale-125 transition-transform ${myEmoji === emoji ? 'bg-white/30 scale-110' : ''}`}
+                  >
                     {emoji}
                   </button>
                 ))}

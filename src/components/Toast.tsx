@@ -22,6 +22,11 @@ export const Toast: React.FC = () => {
       <div className={`animate-pop flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium sm:max-w-sm ${color}`}>
         <Icon className="w-5 h-5 shrink-0" />
         <span className="min-w-0 break-words">{toast.message}</span>
+        {toast.action && (
+          <button onClick={toast.action.onClick} className="pointer-events-auto ml-1 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold shrink-0">
+            {toast.action.label}
+          </button>
+        )}
       </div>
     </div>
   );

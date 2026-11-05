@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LucideIcon, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { LucideIcon, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
+import { frameClass } from '../utils/avatarFrames';
 
 // Các mảnh giao diện nhỏ dùng lại ở nhiều trang: tiêu đề trang, màn hình trống, nút tab, ô nhập có nhãn, ảnh đại diện.
 // (Các class như "card", "btn-primary", "input"... được định nghĩa trong src/index.css.)
@@ -46,10 +47,68 @@ export const EmptyState: React.FC<{ icon: LucideIcon; title: string; description
   </div>
 );
 
+/** Màn hình lỗi thân thiện khi tải dữ liệu thất bại, kèm nút "Thử lại". */
+export const ErrorState: React.FC<{ title?: string; description?: string; onRetry?: () => void }> = ({
+  title = 'Không tải được dữ liệu',
+  description = 'Có thể mạng đang chập chờn hoặc máy chủ đang bận. Bạn thử lại nhé.',
+  onRetry,
+}) => (
+  <div role="alert" className="card--empty">
+    <div className="empty-icon !bg-rose-50 !text-rose-500">
+      <AlertTriangle className="w-8 h-8" />
+    </div>
+    <h3 className="text-base font-bold text-slate-800">{title}</h3>
+    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">{description}</p>
+    {onRetry && (
+      <button onClick={onRetry} className="btn-primary mt-5">
+        Thử lại
+      </button>
+    )}
+  </div>
+);
+
 /** Vòng xoay "đang tải" ở giữa vùng nội dung. */
 export const PageLoading: React.FC<{ text?: string }> = ({ text = 'Đang tải...' }) => (
   <div role="status" className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
     <Loader2 className="w-5 h-5 animate-spin" /> {text}
+  </div>
+);
+
+/** Khối xám nhấp nháy giữ chỗ khi đang tải dữ liệu. */
+export const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => <div aria-hidden="true" className={`animate-pulse rounded-lg bg-slate-200 ${className}`} />;
+
+/** Khung bài viết giả hiện lúc đang tải bảng tin / trang theo hashtag. */
+export const PostSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => (
+  <div role="status" aria-label="Đang tải bài viết">
+    {Array.from({ length: count }, (_, i) => (
+      <div key={i} className="card mb-5 p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="w-11 h-11 rounded-full" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-2.5 w-1/5" />
+          </div>
+        </div>
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-4/5" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    ))}
+  </div>
+);
+
+/** Danh sách dòng giả (thông báo, bạn bè...) lúc đang tải. */
+export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
+  <div role="status" aria-label="Đang tải danh sách" className="card rounded-3xl divide-y divide-slate-100">
+    {Array.from({ length: count }, (_, i) => (
+      <div key={i} className="p-4 flex items-center gap-3.5">
+        <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-3 w-2/3" />
+          <Skeleton className="h-2.5 w-1/4" />
+        </div>
+      </div>
+    ))}
   </div>
 );
 
@@ -139,6 +198,17 @@ export const Avatar: React.FC<{ src?: string; size?: string; online?: boolean; c
     {online && <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white absolute -bottom-0.5 -right-0.5" />}
   </div>
 );
+
+/** Khung quanh ảnh đại diện (vòng màu / dải màu). Không có khung thì trả nguyên ảnh, không thêm thẻ nào. */
+export const AvatarFrame: React.FC<{ frame?: string; className?: string; children: React.ReactNode }> = ({ frame, className = '', children }) => {
+  const cls = frameClass(frame);
+  if (!cls) return <>{children}</>;
+  return (
+    <div data-frame={frame} className={`rounded-full p-[3px] shrink-0 ${cls} ${className}`}>
+      {children}
+    </div>
+  );
+};
 
 /** Huy hiệu đếm số (thông báo, tin nhắn): quá 99 thì hiện "99+". */
 export const CountBadge: React.FC<{ count: number; className?: string }> = ({ count, className = '' }) =>

@@ -1,12 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2, Loader2, Moon, Sun } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 // Khung chung cho 4 trang chưa đăng nhập (đăng nhập, đăng ký, quên / đặt lại mật khẩu):
 // logo SocialNet ở trên, một thẻ trắng ở giữa chứa nội dung. Kèm vài mảnh giao diện mà cả 4 trang cùng dùng.
 
-export const AuthLayout: React.FC<{ subtitle: string; children: React.ReactNode }> = ({ subtitle, children }) => (
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-100 to-indigo-50 flex items-center justify-center px-4 py-8">
+export const AuthLayout: React.FC<{ subtitle: string; children: React.ReactNode }> = ({ subtitle, children }) => {
+  const { resolved, toggle } = useTheme();
+  return (
+  <div className="bg-auth min-h-screen flex items-center justify-center px-4 py-8 relative">
+    <button onClick={toggle} aria-label={resolved === 'dark' ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'} className="absolute top-4 right-4 p-2.5 rounded-full bg-white/80 hover:bg-white text-slate-600 shadow">
+      {resolved === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+    </button>
     <div className="max-w-md w-full">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-violet-600 text-white shadow-xl mb-3">
@@ -18,7 +24,8 @@ export const AuthLayout: React.FC<{ subtitle: string; children: React.ReactNode 
       <div className="animate-pop bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">{children}</div>
     </div>
   </div>
-);
+  );
+};
 
 export const SubmitButton: React.FC<{ loading: boolean; children: React.ReactNode }> = ({ loading, children }) => (
   <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2">

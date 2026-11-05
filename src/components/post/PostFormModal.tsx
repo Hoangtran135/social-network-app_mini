@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smile, X, Image as ImageIcon, Trash2, Loader2, UserPlus, Video as VideoIcon } from 'lucide-react';
+import { Smile, X, Image as ImageIcon, Trash2, Loader2, UserPlus, Video as VideoIcon, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { Post, Privacy, User } from '../../types';
@@ -11,7 +11,7 @@ import { FriendPicker, toggleId } from '../FriendPicker';
 import { MentionSuggestions } from './MentionSuggestions';
 
 // Hộp thoại đăng bài MỚI hoặc SỬA bài (có truyền post = đang sửa bài đó).
-// Gồm: nội dung (gõ @ để gắn thẻ), quyền riêng tư, ảnh HOẶC video, cảm xúc, gắn thẻ bạn bè.
+// Gồm: nội dung (gõ @ để gắn thẻ, #hashtag tự thành liên kết), quyền riêng tư, ảnh HOẶC video, cảm xúc, check-in vị trí, gắn thẻ bạn bè.
 // wallOwner: có giá trị khi đăng lên tường người khác (mở từ trang cá nhân của họ).
 // Cách dùng: {open && <PostFormModal onClose={() => setOpen(false)} />}
 
@@ -25,10 +25,11 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
   const [content, setContent] = useState(post?.content || '');
   const [privacy, setPrivacy] = useState<Privacy>(post?.privacy || 'public');
   const [feeling, setFeeling] = useState(post?.feeling || '');
+  const [location, setLocation] = useState(post?.location || '');
   const [images, setImages] = useState<string[]>(post?.images || []);
   const [video, setVideo] = useState(post?.video || '');
   const [taggedIds, setTaggedIds] = useState<string[]>([]);
-  const [panel, setPanel] = useState<'feelings' | 'tags' | null>(null);
+  const [panel, setPanel] = useState<'feelings' | 'tags' | 'location' | null>(null);
 
   const mention = useMention(content, setContent, friends, (f) => setTaggedIds((ids) => (ids.includes(f.id) ? ids : [...ids, f.id])));
   const imageUpload = useFileUpload((files) => setImages((list) => [...list, ...files.map((f) => f.url)]));
@@ -44,8 +45,9 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
     e.preventDefault();
     if (isEmpty || isUploading) return;
     const data = { content, privacy, feeling: feeling || undefined, images, video: video || undefined };
-    if (isEdit) updatePost(post.id, data);
-    else createPost({ ...data, wallOwner, taggedUserIds: taggedIds });
+    // Sửa bài gửi cả chuỗi rỗng để XOÁ vị trí; đăng mới thì bỏ trống = không gửi
+    if (isEdit) updatePost(post.id, { ...data, location: location.trim() });
+    else createPost({ ...data, location: location.trim() || undefined, wallOwner, taggedUserIds: taggedIds });
     onClose();
   };
 
@@ -72,6 +74,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
               {currentUser?.name}
               {feeling && <span className="font-normal text-slate-500 text-xs"> {feelingText(feeling)}</span>}
               {taggedUsers.length > 0 && <span className="font-normal text-slate-500 text-xs"> cùng với {taggedUsers.map((u) => u.name).join(', ')}</span>}
+              {location.trim() && <span className="font-normal text-slate-500 text-xs"> tại {location.trim()}</span>}
             </div>
             <select value={privacy} onChange={(e) => setPrivacy(e.target.value as Privacy)} className="mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">
               <option value="public">🌐 Công khai</option>
@@ -137,6 +140,12 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
             ))}
           </div>
         )}
+        {panel === 'location' && (
+          <div className="relative">
+            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input autoFocus value={location} maxLength={200} onChange={(e) => setLocation(e.target.value)} placeholder="Bạn đang ở đâu?" aria-label="Vị trí" className="input pl-9" />
+          </div>
+        )}
         {panel === 'tags' && <FriendPicker friends={friends} selectedIds={taggedIds} onToggle={(id) => setTaggedIds(toggleId(taggedIds, id))} />}
 
         {/* Mỗi bài chỉ có ảnh HOẶC video: đã có cái này thì khoá nút thêm cái kia */}
@@ -153,6 +162,9 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
             </button>
             <button type="button" title="Cảm xúc" onClick={() => setPanel(panel === 'feelings' ? null : 'feelings')} className="p-2 rounded-lg hover:bg-slate-100 text-amber-500">
               <Smile className="w-5 h-5" />
+            </button>
+            <button type="button" title="Check-in" onClick={() => setPanel(panel === 'location' ? null : 'location')} className={`p-2 rounded-lg hover:bg-slate-100 text-rose-600 ${location ? 'bg-rose-50' : ''}`}>
+              <MapPin className="w-5 h-5" />
             </button>
             {!isEdit && (
               <button type="button" title="Gắn thẻ bạn bè" onClick={() => setPanel(panel === 'tags' ? null : 'tags')} className="p-2 rounded-lg hover:bg-slate-100 text-blue-600">

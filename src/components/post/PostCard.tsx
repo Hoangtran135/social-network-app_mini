@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, X, LucideIcon } from 'lucide-react';
+import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, X, EyeOff, MessageSquareOff, MessageSquare, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { useConfirm } from '../../context/ConfirmDialogContext';
@@ -9,23 +9,16 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Post, ReactionType } from '../../types';
 import { feelingText, timeAgo } from '../../utils/format';
-import { UserLinks } from '../ui';
+import { UserLinks, AvatarFrame } from '../ui';
 import { CommentSection } from './CommentSection';
 import { PostFormModal } from './PostFormModal';
+import { PostContent } from './PostContent';
+import { REACTIONS } from '../../utils/reactions';
 
 // Thẻ hiển thị MỘT bài viết (dùng ở bảng tin, trang cá nhân, đã lưu, kỷ niệm):
 // phần đầu (tác giả, thời gian, quyền riêng tư, menu "..."), nội dung + ảnh/video, số cảm xúc / bình luận / chia sẻ,
 // hàng nút (Thích — rê chuột để chọn cảm xúc, Bình luận, Chia sẻ, Lưu) và khung bình luận.
 // Thẻ có id="post-<id>" để có thể cuộn tới khi bấm vào thông báo.
-
-const REACTIONS: Record<ReactionType, { emoji: string; label: string; color: string }> = {
-  like: { emoji: '👍', label: 'Thích', color: 'text-blue-600' },
-  love: { emoji: '❤️', label: 'Yêu thích', color: 'text-rose-500' },
-  haha: { emoji: '😄', label: 'Haha', color: 'text-amber-500' },
-  wow: { emoji: '😮', label: 'Wow', color: 'text-amber-500' },
-  sad: { emoji: '😢', label: 'Buồn', color: 'text-yellow-600' },
-  angry: { emoji: '😡', label: 'Phẫn nộ', color: 'text-orange-600' },
-};
 
 const PRIVACY_ICONS = { public: Globe, friends: Users, only_me: Lock };
 const PRIVACY_LABELS = { public: 'Công khai', friends: 'Bạn bè', only_me: 'Chỉ mình tôi' };
@@ -61,7 +54,7 @@ const MenuItem: React.FC<{ icon: LucideIcon; label: string; onClick: () => void;
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const { currentUser } = useAuth();
-  const { toggleReaction, toggleSavePost, togglePinPost, sharePost, sharePostToChat, getOrCreateConversation, deletePost, showToast, friends } = useSocial();
+  const { toggleReaction, toggleSavePost, togglePinPost, sharePost, sharePostToChat, getOrCreateConversation, deletePost, hidePost, toggleComments, showToast, friends } = useSocial();
   const { openChat } = useChatWindows();
   const confirm = useConfirm();
 
@@ -69,6 +62,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showSendToFriend, setShowSendToFriend] = useState(false);
+  const [shareDialog, setShareDialog] = useState(false); // hộp thoại chia sẻ kèm lời bình
+  const [shareMessage, setShareMessage] = useState('');
+  const [showHistory, setShowHistory] = useState(false); // lịch sử chỉnh sửa
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const menuRef = useClickOutside(() => setMenu(null));
   const hasReactions = post.reactions.length > 0;
@@ -80,6 +76,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   useEscapeKey(() => {
     setPreviewImage(null);
     setShowSendToFriend(false);
+    setShareDialog(false);
+    setShowHistory(false);
   });
 
   const isOwner = currentUser?.id === post.author.id;
@@ -107,7 +105,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       <div className="p-5 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link to={`/profile/${post.author.id}`}>
-            <img src={post.author.avatar} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover shrink-0" />
+            <AvatarFrame frame={post.author.avatarFrame}>
+              <img src={post.author.avatar} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover shrink-0" />
+            </AvatarFrame>
           </Link>
           <div className="min-w-0 text-sm">
             <div>
@@ -131,7 +131,11 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
             <div className="flex items-center flex-wrap gap-x-1.5 text-xs text-slate-400 mt-0.5">
               {post.pinned && <span className="text-blue-600 font-semibold">📌 Đã ghim ·</span>}
               <span>{timeAgo(post.createdAt)}</span>
-              {post.updatedAt && <span className="italic">(đã chỉnh sửa)</span>}
+              {post.updatedAt && (
+                <button onClick={() => setShowHistory(true)} className="italic hover:underline" title="Xem lịch sử chỉnh sửa">
+                  (đã chỉnh sửa)
+                </button>
+              )}
               <span>·</span>
               <span title={PRIVACY_LABELS[post.privacy]} className="inline-flex">
                 <PrivacyIcon className="w-3.5 h-3.5" />
@@ -148,6 +152,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           {menu === 'options' && (
             <div className="animate-pop absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-semibold">
               <MenuItem icon={Bookmark} label={post.isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'} onClick={run(() => toggleSavePost(post.id))} />
+              {!isOwner && <MenuItem icon={EyeOff} label="Ẩn bài viết" onClick={run(() => hidePost(post.id))} />}
               <MenuItem
                 icon={Copy}
                 label="Sao chép liên kết"
@@ -159,6 +164,11 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
               {isOwner && (
                 <>
                   <MenuItem icon={Pin} label={post.pinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'} onClick={run(() => togglePinPost(post.id))} />
+                  <MenuItem
+                    icon={post.commentsDisabled ? MessageSquare : MessageSquareOff}
+                    label={post.commentsDisabled ? 'Bật bình luận' : 'Tắt bình luận'}
+                    onClick={run(() => toggleComments(post.id))}
+                  />
                   <MenuItem icon={Edit2} label="Chỉnh sửa bài viết" onClick={run(() => setIsEditing(true))} />
                   <MenuItem
                     icon={Trash2}
@@ -174,7 +184,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       </div>
 
       {/* ----- Nội dung, video, lưới ảnh (bấm ảnh để phóng to) ----- */}
-      {post.content && <p className="px-5 pb-3 text-slate-800 whitespace-pre-line break-words">{post.content}</p>}
+      {post.content && <PostContent text={post.content} className="px-5 pb-3 text-slate-800" />}
       {post.video && <video src={post.video} controls preload="metadata" className="w-full max-h-[32rem] bg-black" />}
       {!!post.images?.length && <ImageGrid images={post.images} onOpen={setPreviewImage} />}
 
@@ -249,7 +259,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </button>
           {menu === 'share' && (
             <div className="animate-pop absolute bottom-full mb-1 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20 text-xs">
-              <MenuItem icon={Share2} label="Chia sẻ lên trang cá nhân" onClick={run(() => sharePost(post.id))} />
+              <MenuItem icon={Share2} label="Chia sẻ lên trang cá nhân" onClick={run(() => setShareDialog(true))} />
               <MenuItem icon={MessageCircle} label="Gửi qua tin nhắn" onClick={run(() => setShowSendToFriend(true))} />
             </div>
           )}
@@ -266,7 +276,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         </button>
       </div>
 
-      {showComments && <CommentSection postId={post.id} />}
+      {showComments && <CommentSection postId={post.id} disabled={!!post.commentsDisabled} />}
 
       {/* ----- Các hộp thoại ----- */}
       {isEditing && <PostFormModal post={post} onClose={() => setIsEditing(false)} />}
@@ -287,6 +297,68 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   <img src={f.avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
                   <span className="text-xs font-semibold text-slate-700 truncate">{f.name}</span>
                 </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shareDialog && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShareDialog(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Chia sẻ bài viết" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-slate-800 text-sm">Chia sẻ lên trang cá nhân</h3>
+              <button onClick={() => setShareDialog(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <textarea
+              autoFocus
+              rows={3}
+              maxLength={2000}
+              value={shareMessage}
+              onChange={(e) => setShareMessage(e.target.value)}
+              placeholder="Hãy nói gì đó về nội dung này... (không bắt buộc)"
+              className="input resize-none"
+            />
+            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+              <b className="text-slate-800">{post.author.name}</b>
+              <p className="line-clamp-3 break-words whitespace-pre-line">{post.content}</p>
+            </div>
+            <button
+              onClick={() => {
+                sharePost(post.id, shareMessage.trim() || undefined);
+                setShareMessage('');
+                setShareDialog(false);
+              }}
+              className="btn-primary w-full mt-3 py-2.5"
+            >
+              Chia sẻ ngay
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Lịch sử chỉnh sửa" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-slate-800 text-sm">Lịch sử chỉnh sửa</h3>
+              <button onClick={() => setShowHistory(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto space-y-3 text-sm">
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                <p className="text-[11px] font-bold text-blue-600 mb-1">Phiên bản hiện tại · {timeAgo(post.updatedAt)}</p>
+                <p className="whitespace-pre-line break-words text-slate-800">{post.content || '(không có nội dung chữ)'}</p>
+              </div>
+              {!post.editHistory?.length && <p className="text-xs text-slate-500 text-center py-2">Bài viết này không có phiên bản nội dung cũ (chỉ đổi ảnh, quyền riêng tư hoặc cảm xúc).</p>}
+              {[...(post.editHistory || [])].reverse().map((version, i) => (
+                <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-[11px] font-bold text-slate-500 mb-1">Phiên bản cũ · bị thay thế {timeAgo(version.editedAt)}</p>
+                  <p className="whitespace-pre-line break-words text-slate-700">{version.content || '(không có nội dung chữ)'}</p>
+                </div>
               ))}
             </div>
           </div>

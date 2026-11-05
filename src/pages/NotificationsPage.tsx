@@ -4,7 +4,7 @@ import { useSocial } from '../context/SocialContext';
 import { useOpenNotification } from '../hooks/useOpenNotification';
 import { NotificationItem } from '../types';
 import { timeAgo } from '../utils/format';
-import { PageHeader, EmptyState, TabButton } from '../components/ui';
+import { PageHeader, EmptyState, ErrorState, ListSkeleton, TabButton } from '../components/ui';
 
 // Trang thông báo (/notifications): lọc theo loại, đánh dấu tất cả đã đọc, tải thêm.
 // Bấm vào một thông báo để mở bài viết / trang cá nhân liên quan.
@@ -19,7 +19,7 @@ const FILTERS: { key: string; label: string; match: (n: NotificationItem) => boo
 const TYPE_ICONS: Record<NotificationItem['type'], string> = { like: '❤️', comment: '💬', friend_request: '👋', friend_accept: '🤝', system: '🔔' };
 
 export const NotificationsPage: React.FC = () => {
-  const { notifications, markAllNotificationsAsRead, hasMoreNotifications, loadMoreNotifications } = useSocial();
+  const { notifications, notificationsStatus, reloadNotifications, markAllNotificationsAsRead, hasMoreNotifications, loadMoreNotifications } = useSocial();
   const openNotification = useOpenNotification();
   const [filter, setFilter] = useState(FILTERS[0]);
   const unread = notifications.filter((n) => !n.isRead).length;
@@ -43,7 +43,11 @@ export const NotificationsPage: React.FC = () => {
         ))}
       </div>
 
-      {shown.length === 0 ? (
+      {notificationsStatus === 'loading' ? (
+        <ListSkeleton />
+      ) : notificationsStatus === 'error' ? (
+        <ErrorState title="Không tải được thông báo" onRetry={reloadNotifications} />
+      ) : shown.length === 0 ? (
         <EmptyState icon={Sparkles} title={filter.key === 'all' ? 'Chưa có thông báo nào' : 'Không có thông báo phù hợp'} description={filter.key === 'all' ? 'Khi có người tương tác với bạn, thông báo sẽ hiện ở đây.' : 'Thử chọn bộ lọc khác để xem thêm.'} />
       ) : (
         <div className="card rounded-3xl overflow-hidden divide-y divide-slate-100">

@@ -2,6 +2,8 @@
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry';
 export type Privacy = 'public' | 'friends' | 'only_me';
+export type AvatarFrame = 'none' | 'blue' | 'green' | 'rose' | 'gold' | 'rainbow';
+export type SocialPlatform = 'facebook' | 'github' | 'linkedin' | 'twitter' | 'instagram' | 'youtube' | 'tiktok';
 
 export interface User {
   id: string;
@@ -15,11 +17,14 @@ export interface User {
   education?: string;
   location?: string;
   website?: string;
+  avatarFrame?: AvatarFrame; // khung quanh ảnh đại diện
+  socialLinks?: Partial<Record<SocialPlatform, string>>; // chỉ gồm các liên kết có giá trị
   joinDate: string;
   friendsCount: number;
   isOnline?: boolean;
   lastActive?: string;
   blockedUserIds?: string[]; // chỉ có với chính mình
+  emailVerified?: boolean; // chỉ có với chính mình; false = chưa bấm link xác minh trong email
 }
 
 export interface Post {
@@ -41,6 +46,9 @@ export interface Post {
   sharesCount: number;
   isSaved?: boolean; // người đang xem đã lưu bài này chưa
   pinned?: boolean;
+  hashtags?: string[]; // chữ thường
+  commentsDisabled?: boolean; // chủ bài đã tắt bình luận
+  editHistory?: { content: string; editedAt: string }[]; // các phiên bản nội dung TRƯỚC mỗi lần sửa (editedAt = lúc bị thay thế)
 }
 
 export interface Comment {
@@ -51,7 +59,9 @@ export interface Comment {
   image?: string;
   taggedUsers?: User[];
   createdAt: string;
-  likes: string[]; // id những người đã thích
+  likes: string[]; // id những người đã THÍCH (chỉ cảm xúc "like")
+  reactions?: { type: ReactionType; userId: string }[]; // mọi cảm xúc, gồm cả like
+  editedAt?: string; // lần sửa gần nhất
   parentId?: string; // có giá trị = đây là câu trả lời
 }
 
@@ -66,6 +76,7 @@ export interface Story {
   createdAt: string;
   expiresAt: string;
   viewers: { userId: string; userName: string; avatar: string; viewedAt: string }[];
+  reactions?: { userId: string; userName: string; avatar: string; emoji: string }[]; // cảm xúc nhanh (mỗi người một emoji)
 }
 
 export interface MessageAttachment {
@@ -87,6 +98,7 @@ export interface Message {
   sharedPostId?: string;
   createdAt: string;
   isRead: boolean; // mọi thành viên khác đã đọc
+  deliveredTo?: string[]; // những người đã NHẬN tin (thiết bị đã báo về)
   isRecalled?: boolean;
   reactions?: Record<string, string>; // { userId: emoji }
 }

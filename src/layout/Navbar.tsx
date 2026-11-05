@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, LucideIcon } from 'lucide-react';
+import { Home, Users, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, Moon, Sun, LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSocial } from '../context/SocialContext';
 import { useOpenNotification } from '../hooks/useOpenNotification';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -46,6 +47,7 @@ const MENU_ITEM = 'w-full px-4 py-2.5 text-sm hover:bg-slate-50 flex items-cente
 
 export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreatePost }) => {
   const { currentUser, logout } = useAuth();
+  const { resolved, toggle: toggleTheme } = useTheme();
   const { notifications, conversations, friendRequests } = useSocial();
   const openNotification = useOpenNotification();
   const navigate = useNavigate();
@@ -145,6 +147,10 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
                 <Link to="/settings" className={`${MENU_ITEM} text-slate-700`}>
                   <Settings className="w-4 h-4 text-slate-400" /> Cài đặt tài khoản
                 </Link>
+                <button onClick={toggleTheme} className={`${MENU_ITEM} text-slate-700`}>
+                  {resolved === 'dark' ? <Sun className="w-4 h-4 text-slate-400" /> : <Moon className="w-4 h-4 text-slate-400" />}
+                  {resolved === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}
+                </button>
                 <button
                   onClick={() => {
                     logout();

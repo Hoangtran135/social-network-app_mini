@@ -4,7 +4,10 @@ import { Camera, Save, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../context/SocialContext';
 import { useFileUpload } from '../hooks/useFileUpload';
-import { FormField } from '../components/ui';
+import { FormField, AvatarFrame } from '../components/ui';
+import { AVATAR_FRAMES } from '../utils/avatarFrames';
+import { SOCIAL_PLATFORMS, isValidSocialUrl } from '../utils/socialLinks';
+import { AvatarFrame as FrameKey, SocialPlatform } from '../types';
 
 // Trang sửa hồ sơ (/settings/profile): ảnh bìa, ảnh đại diện, họ tên, tiểu sử, nơi làm việc, học vấn, nơi sống, website.
 // Chọn ảnh là upload ngay, nhưng chỉ khi bấm "Lưu thay đổi" hồ sơ mới được cập nhật.
@@ -15,6 +18,8 @@ export const EditProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const bioId = useId();
   const [saving, setSaving] = useState(false);
+  const [frame, setFrame] = useState<FrameKey>(currentUser?.avatarFrame || 'none');
+  const [links, setLinks] = useState<Record<SocialPlatform, string>>(() => Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, currentUser?.socialLinks?.[p.key] || ''])) as Record<SocialPlatform, string>);
   const [form, setForm] = useState({
     name: currentUser?.name || '',
     bio: currentUser?.bio || '',
@@ -33,9 +38,11 @@ export const EditProfilePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving || isUploading) return;
+    const bad = SOCIAL_PLATFORMS.find((p) => !isValidSocialUrl(links[p.key]));
+    if (bad) return showToast(`Liên kết ${bad.label} phải bắt đầu bằng http:// hoặc https://`, 'error');
     setSaving(true);
     try {
-      await updateProfile(form);
+      await updateProfile({ ...form, avatarFrame: frame, socialLinks: Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, links[p.key].trim()])) });
       showToast('Đã lưu thông tin trang cá nhân!');
       navigate(`/profile/${currentUser?.id}`);
     } catch {
@@ -66,10 +73,36 @@ export const EditProfilePage: React.FC = () => {
           </div>
           <PickImageButton upload={coverUpload} label="Đổi ảnh bìa" className="absolute top-3 right-3 !bg-white/90 hover:!bg-white !text-slate-700 shadow" />
         </div>
-        <div className="px-5 sm:px-6 pb-5 -mt-10 flex items-end gap-4">
-          <img src={form.avatar} alt="Ảnh đại diện" className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-lg bg-slate-200 shrink-0" />
+        <div className="px-5 sm:px-6 pb-5 -mt-10 flex items-end gap-4 relative z-10">
+          <AvatarFrame frame={frame} className="shadow-lg">
+            <img src={form.avatar} alt="Ảnh đại diện" className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white bg-slate-200 shrink-0" />
+          </AvatarFrame>
           <PickImageButton upload={avatarUpload} label="Đổi ảnh đại diện" className="mb-1" />
         </div>
+      </div>
+
+      <div className="card rounded-3xl p-5 sm:p-6 space-y-3">
+        <h3 className="font-bold text-sm text-slate-800">Khung ảnh đại diện</h3>
+        <div className="flex flex-wrap gap-3" role="group" aria-label="Chọn khung ảnh đại diện">
+          {AVATAR_FRAMES.map((f) => (
+            <button key={f.key} type="button" aria-pressed={frame === f.key} aria-label={f.label} title={f.label} onClick={() => setFrame(f.key)} className={`flex flex-col items-center gap-1 text-[11px] font-semibold ${frame === f.key ? 'text-blue-600' : 'text-slate-500'}`}>
+              <span className={`w-12 h-12 rounded-full p-[3px] ${f.className || 'bg-slate-200'} ${frame === f.key ? 'ring-2 ring-blue-600 ring-offset-2' : ''}`}>
+                <img src={form.avatar} alt="" className="w-full h-full rounded-full object-cover border-2 border-white bg-slate-200" />
+              </span>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card rounded-3xl p-5 sm:p-6 space-y-4">
+        <h3 className="font-bold text-sm text-slate-800">Liên kết mạng xã hội</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {SOCIAL_PLATFORMS.map((p) => (
+            <FormField key={p.key} label={p.label} icon={p.icon} type="url" inputMode="url" placeholder={p.placeholder} value={links[p.key]} onChange={(e) => setLinks((l) => ({ ...l, [p.key]: e.target.value }))} />
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">Để trống nếu không muốn hiển thị. Liên kết phải bắt đầu bằng http:// hoặc https://.</p>
       </div>
 
       <div className="card rounded-3xl p-5 sm:p-6 space-y-4">

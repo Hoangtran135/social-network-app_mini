@@ -6,6 +6,7 @@ import { User } from '../types';
 import { useSocial } from '../context/SocialContext';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { parseTagQuery } from '../utils/hashtag';
 import { Avatar } from '../components/ui';
 
 // Ô tìm kiếm người dùng trên Navbar: gõ tên / @username → gợi ý tối đa 8 người (gọi GET /api/users?q=), bấm vào để mở trang cá nhân.
@@ -52,6 +53,7 @@ export const SearchBox: React.FC = () => {
   }, [query]);
 
   const showPanel = open && query.trim().length > 0;
+  const tagQuery = parseTagQuery(query); // gõ "#vui" → gợi ý xem bài theo hashtag
 
   return (
     <div ref={boxRef} className="min-w-0">
@@ -115,6 +117,12 @@ export const SearchBox: React.FC = () => {
 
         {showPanel && (
           <div className="animate-pop max-sm:fixed max-sm:inset-x-2 max-sm:top-[4.25rem] sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:w-[22rem] bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 max-h-[calc(100dvh-5.5rem)] overflow-y-auto">
+            {tagQuery && (
+              <Link to={`/hashtag/${encodeURIComponent(tagQuery)}`} onClick={() => { close(); setQuery(''); }} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-sm font-semibold text-blue-600">
+                <span className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-lg">#</span>
+                Xem bài viết có #{tagQuery}
+              </Link>
+            )}
             {loading && results === null && (
               <p className="flex items-center justify-center gap-2 p-5 text-sm text-slate-400">
                 <Loader2 className="w-4 h-4 animate-spin" /> Đang tìm...

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Send, Image as ImageIcon, Paperclip, Smile, X, Minus, MoreHorizontal, CheckCheck, FileText, Loader2, SmilePlus, RotateCcw } from 'lucide-react';
+import { MessageCircle, Send, Image as ImageIcon, Paperclip, Smile, X, Minus, MoreHorizontal, CheckCheck, FileText, Loader2, SmilePlus, RotateCcw, Trash2 } from 'lucide-react';
 import { useSocial } from '../../context/SocialContext';
 import { useAuth } from '../../context/AuthContext';
 import { useFileUpload } from '../../hooks/useFileUpload';
@@ -24,7 +24,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   onClose,
   onToggleMinimize,
 }) => {
-  const { conversations, messages, sendMessage, loadMessages, setNickname } = useSocial();
+  const { conversations, messages, sendMessage, loadMessages, setNickname, typingIn, sendTyping } = useSocial();
   const { currentUser } = useAuth();
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
@@ -33,6 +33,29 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   const [color, setColor] = useState(() => localStorage.getItem(`chatTheme:${conversationId}`) || THEME_COLORS[0]);
   const optionsRef = useClickOutside(() => panel === 'options' && setPanel(null));
   const endRef = useRef<HTMLDivElement>(null);
+
+  // "Đang gõ...": báo khi bắt đầu gõ (chỉ một lần), báo ngừng sau 2,5 giây không gõ / khi gửi / khi đóng cửa sổ
+  const typingActive = useRef(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const stopTyping = () => {
+    clearTimeout(idleTimer.current);
+    if (typingActive.current) {
+      typingActive.current = false;
+      sendTyping(conversationId, false);
+    }
+  };
+  const onType = (value: string) => {
+    setText(value);
+    if (!value.trim()) return stopTyping();
+    if (!typingActive.current) {
+      typingActive.current = true;
+      sendTyping(conversationId, true);
+    }
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(stopTyping, 2500);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => stopTyping(), []);
 
   // Tệp upload xong chỉ nằm trong danh sách "chờ gửi"; bấm Gửi mới gửi kèm tin nhắn
   const addFiles = (type: 'image' | 'file') => (files: UploadResult[]) =>
@@ -63,6 +86,10 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   // Trên điện thoại chat chiếm toàn màn hình nên bấm vào thanh tiêu đề không thu nhỏ (chỉ có nút đóng)
   const toggleMinimize = () => window.matchMedia('(min-width: 640px)').matches && onToggleMinimize();
 
+  const typingNames = (typingIn[conversationId] || []).map((id) => conversation.participants.find((p) => p.id === id)?.name).filter(Boolean) as string[];
+  // Tin cuối cùng của mình hiện trạng thái gửi / nhận / xem
+  const lastMine = [...(list || [])].reverse().find((m) => m.senderId === currentUser.id && m.kind !== 'system' && !m.isRecalled);
+
   const send = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() && attachments.length === 0) return;
@@ -70,6 +97,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
     setText('');
     setAttachments([]);
     setPanel(null);
+    stopTyping();
   };
 
   const pickColor = (c: string) => {
@@ -106,7 +134,9 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
         <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="font-bold text-xs truncate">{title}</div>
-          {partner && <div className="text-[10px] opacity-80">{partner.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}</div>}
+          {partner && (
+            <div className="text-[10px] opacity-80">{partner.isOnline ? 'Đang hoạt động' : partner.lastActive ? `Hoạt động ${timeAgo(partner.lastActive)}` : 'Không hoạt động'}</div>
+          )}
         </div>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <div className="relative" ref={optionsRef}>
@@ -172,9 +202,15 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
             <MessageCircle className="w-8 h-8 mb-2" /> Hãy gửi lời chào để bắt đầu trò chuyện!
           </p>
         )}
-        {list?.map((m) => <MessageBubble key={m.id} message={m} conversationId={conversationId} color={color} />)}
+        {list?.map((m) => <MessageBubble key={m.id} message={m} conversationId={conversationId} color={color} status={m.id === lastMine?.id ? deliveryStatus(m) : undefined} />)}
         <div ref={endRef} />
       </div>
+
+      {typingNames.length > 0 && (
+        <div role="status" className="px-3 py-1 text-[11px] text-slate-500 bg-slate-50 flex items-center gap-1.5">
+          <span aria-hidden="true" className="animate-pulse tracking-widest">•••</span> {typingNames.join(', ')} đang gõ...
+        </div>
+      )}
 
       {/* ----- Tệp chờ gửi, emoji nhanh, ô nhập ----- */}
       {attachments.length > 0 && (
@@ -220,7 +256,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
         <button type="button" aria-label="Emoji" onClick={() => setPanel(panel === 'emoji' ? null : 'emoji')} className="p-2 rounded-lg text-slate-500 hover:text-blue-600">
           <Smile className="w-4 h-4" />
         </button>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhập tin nhắn..." className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500" />
+        <input value={text} onChange={(e) => onType(e.target.value)} placeholder="Nhập tin nhắn..." className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-100 rounded-full focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500" />
         <button type="submit" aria-label="Gửi" disabled={!text.trim() && attachments.length === 0} style={{ backgroundColor: color }} className="p-2.5 rounded-full shrink-0 text-white disabled:opacity-40">
           <Send className="w-3.5 h-3.5" />
         </button>
@@ -230,8 +266,11 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
 };
 
 /** Một tin nhắn: tin của mình bên phải (màu chủ đề), của người khác bên trái. Rê chuột để thả cảm xúc / thu hồi. */
-const MessageBubble: React.FC<{ message: Message; conversationId: string; color: string }> = ({ message: m, conversationId, color }) => {
-  const { recallMessage, reactToMessage } = useSocial();
+/** Trạng thái của tin mình gửi: đã xem > đã nhận > đã gửi. */
+const deliveryStatus = (m: Message) => (m.isRead ? 'Đã xem' : m.deliveredTo?.length ? 'Đã nhận' : 'Đã gửi');
+
+const MessageBubble: React.FC<{ message: Message; conversationId: string; color: string; status?: string }> = ({ message: m, conversationId, color, status }) => {
+  const { recallMessage, reactToMessage, deleteMessageForMe } = useSocial();
   const { currentUser } = useAuth();
   const [showReactions, setShowReactions] = useState(false);
 
@@ -277,19 +316,25 @@ const MessageBubble: React.FC<{ message: Message; conversationId: string; color:
             {[...new Set(reactions)].join('')} {reactions.length > 1 && reactions.length}
           </div>
         )}
+        {isMine && status && <div className="mt-0.5 text-[10px] text-slate-400 text-right">{status}</div>}
       </div>
 
-      {!m.isRecalled && (
+      {(
         <div className="relative flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
-          <button aria-label="Thả cảm xúc" onClick={() => setShowReactions(!showReactions)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500">
-            <SmilePlus className="w-3 h-3" />
-          </button>
-          {isMine && (
+          {!m.isRecalled && (
+            <button aria-label="Thả cảm xúc" onClick={() => setShowReactions(!showReactions)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500">
+              <SmilePlus className="w-3 h-3" />
+            </button>
+          )}
+          {isMine && !m.isRecalled && (
             <button title="Thu hồi" onClick={() => recallMessage(conversationId, m.id)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-rose-600">
               <RotateCcw className="w-3 h-3" />
             </button>
           )}
-          {showReactions && (
+          <button title="Xóa với tôi" onClick={() => deleteMessageForMe(conversationId, m.id)} className="p-1 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-rose-600">
+            <Trash2 className="w-3 h-3" />
+          </button>
+          {showReactions && !m.isRecalled && (
             <div className={`absolute bottom-full mb-1 flex bg-white border border-slate-200 rounded-full shadow-lg p-1 z-20 ${isMine ? 'right-0' : 'left-0'}`}>
               {REACTION_EMOJIS.map((e) => (
                 <button key={e} onClick={() => react(e)} className="p-0.5 text-sm hover:scale-125 transition-transform">

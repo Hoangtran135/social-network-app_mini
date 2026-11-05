@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocialProvider } from './context/SocialContext';
 import { ChatWindowsProvider } from './context/ChatWindowsContext';
 import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { MainLayout } from './layout/MainLayout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -18,6 +19,8 @@ import { SettingsPage } from './pages/SettingsPage';
 import { BlockedUsersPage } from './pages/BlockedUsersPage';
 import { SavedPostsPage } from './pages/SavedPostsPage';
 import { MemoriesPage } from './pages/MemoriesPage';
+import { HashtagPage } from './pages/HashtagPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { PageLoading } from './components/ui';
 
 // Component gốc của giao diện: bọc các "Provider" (dữ liệu dùng chung) và khai báo đường dẫn → trang.
@@ -46,6 +49,7 @@ export const AppRoutes: React.FC = () => (
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/verify-email" element={<VerifyEmailPage />} />
 
     {/* Các trang dưới đây cần đăng nhập, hiển thị bên trong MainLayout (navbar + sidebar) */}
     <Route element={<RequireLogin><MainLayout /></RequireLogin>}>
@@ -58,6 +62,7 @@ export const AppRoutes: React.FC = () => (
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/saved" element={<SavedPostsPage />} />
       <Route path="/memories" element={<MemoriesPage />} />
+      <Route path="/hashtag/:tag" element={<HashtagPage />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/" replace />} />
@@ -66,13 +71,15 @@ export const AppRoutes: React.FC = () => (
 
 /** Các Provider dùng chung. Thứ tự lồng quan trọng: SocialProvider cần biết ai đang đăng nhập nên phải nằm TRONG AuthProvider. */
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ConfirmDialogProvider>
-    <AuthProvider>
-      <SocialProvider>
-        <ChatWindowsProvider>{children}</ChatWindowsProvider>
-      </SocialProvider>
-    </AuthProvider>
-  </ConfirmDialogProvider>
+  <ThemeProvider>
+    <ConfirmDialogProvider>
+      <AuthProvider>
+        <SocialProvider>
+          <ChatWindowsProvider>{children}</ChatWindowsProvider>
+        </SocialProvider>
+      </AuthProvider>
+    </ConfirmDialogProvider>
+  </ThemeProvider>
 );
 
 export default function App() {

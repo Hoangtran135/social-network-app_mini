@@ -48,6 +48,13 @@ function useAuthState() {
       setCurrentUser(null);
       disconnectSocket();
     },
+    /** Tải lại thông tin tài khoản từ server (vd sau khi xác minh email). Trả về emailVerified mới nhất. */
+    refreshUser: async () => {
+      const { user } = await api.get<{ user: User }>('/auth/me');
+      setCurrentUser(user);
+      return user.emailVerified;
+    },
+    resendVerification: () => api.post('/auth/resend-verification'),
     updateProfile: (data: Partial<User>) => updateMe(api.patch('/users/me', data)),
     blockUser: (userId: string) => updateMe(api.post(`/users/${userId}/block`)),
     unblockUser: (userId: string) => updateMe(api.delete(`/users/${userId}/block`)),

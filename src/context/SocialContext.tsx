@@ -25,6 +25,12 @@ function useSocialState() {
   const [comments, setComments] = useState<Record<string, Comment[]>>({}); // { postId: [bình luận] }
   const [stories, setStories] = useState<Story[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
+  const [following, setFollowing] = useState<User[]>([]); // người mình theo dõi (không cần là bạn bè)
+  const [typing, setTyping] = useState<Record<string, string[]>>({}); // { conversationId: [id người đang gõ] }
+  const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [postsStatus, setPostsStatus] = useState<'loading' | 'ready' | 'error'>('loading'); // trạng thái tải bảng tin lần đầu
+  const [notificationsStatus, setNotificationsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [friendsStatus, setFriendsStatus] = useState<'loading' | 'ready' | 'error'>('loading'); // bạn bè + lời mời
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]); // lời mời gửi đến mình
   const [sentFriendRequests, setSentFriendRequests] = useState<FriendRequest[]>([]); // lời mời mình đã gửi
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -33,13 +39,15 @@ function useSocialState() {
   conversationsRef.current = conversations;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: { label: string; onClick: () => void } } | null>(null);
+  const [tagPosts, setTagPosts] = useState<Post[]>([]); // bài của trang #hashtag đang mở
 
   // ---------- Hàm tiện ích dùng chung ----------
 
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+  /** action = nút trên toast (vd "Hoàn tác"); toast có nút hiện lâu hơn để kịp bấm. */
+  const showToast = (message: string, type: ToastType = 'success', action?: { label: string; onClick: () => void }) => {
+    setToast({ message, type, action });
+    setTimeout(() => setToast(null), action ? 6000 : 3500);
   };
 
   /** Chạy một thao tác; lỗi thì hiện toast đỏ (ưu tiên câu báo lỗi của server). Trả về kết quả, hoặc undefined nếu lỗi. */
@@ -55,6 +63,7 @@ function useSocialState() {
   const updatePosts = (change: (list: Post[]) => Post[]) => {
     setPosts(change);
     setMemoryPosts(change);
+    setTagPosts(change);
   };
   const replacePost = (post: Post) => updatePosts((list) => list.map((p) => (p.id === post.id ? post : p)));
   const changeCommentsCount = (postId: string, delta: number) =>
@@ -72,31 +81,66 @@ function useSocialState() {
   const setLastMessage = (conversationId: string, message: Message) =>
     setConversations((list) => list.map((c) => (c.id === conversationId ? { ...c, lastMessage: message, updatedAt: message.createdAt } : c)));
 
+  /** Tải trang bảng tin đầu tiên (cũng dùng cho nút "Thử lại" khi lỗi). */
+  const loadFirstPosts = () => {
+    setPostsStatus('loading');
+    return api
+      .get<{ posts: Post[] }>(`/posts?limit=${POSTS_PAGE}`)
+      .then((d) => {
+        setPosts(d.posts);
+        setHasMorePosts(d.posts.length === POSTS_PAGE);
+        setPostsStatus('ready');
+      })
+      .catch(() => setPostsStatus('error'));
+  };
+
+  /** Tải trang thông báo đầu tiên (cũng dùng cho nút "Thử lại"). */
+  const loadFirstNotifications = () => {
+    setNotificationsStatus('loading');
+    return api
+      .get<{ notifications: NotificationItem[] }>(`/notifications?limit=${NOTIFS_PAGE}`)
+      .then((d) => {
+        setNotifications(d.notifications);
+        setHasMoreNotifications(d.notifications.length === NOTIFS_PAGE);
+        setNotificationsStatus('ready');
+      })
+      .catch(() => setNotificationsStatus('error'));
+  };
+
+  /** Tải bạn bè + lời mời nhận được + lời mời đã gửi (cũng dùng cho nút "Thử lại"). */
+  const loadFriendsData = () => {
+    setFriendsStatus('loading');
+    return Promise.all([api.get<{ friends: User[] }>('/friends'), api.get<{ requests: FriendRequest[] }>('/friends/requests'), api.get<{ requests: FriendRequest[] }>('/friends/requests/sent')])
+      .then(([f, received, sent]) => {
+        setFriends(f.friends);
+        setFriendRequests(received.requests);
+        setSentFriendRequests(sent.requests);
+        setFriendsStatus('ready');
+      })
+      .catch(() => setFriendsStatus('error'));
+  };
+
   // ---------- Tải dữ liệu ban đầu mỗi khi người đăng nhập thay đổi ----------
 
   useEffect(() => {
     if (!myId) {
       // Đăng xuất → xoá sạch dữ liệu của người cũ
-      [setPosts, setMemoryPosts, setStories, setFriends, setFriendRequests, setSentFriendRequests, setConversations, setNotifications].forEach((set) => set([]));
+      [setPosts, setMemoryPosts, setStories, setFriends, setFollowing, setFriendRequests, setSentFriendRequests, setConversations, setNotifications].forEach((set) => set([]));
       setComments({});
       setMessages({});
+      setPostsStatus('loading');
+      setNotificationsStatus('loading');
+      setFriendsStatus('loading');
       return;
     }
     // Mỗi API tải riêng; một cái lỗi thì các cái khác vẫn hiển thị được
     const load = <T,>(path: string, onData: (data: T) => void) => api.get<T>(path).then(onData).catch(() => {});
-    load<{ posts: Post[] }>(`/posts?limit=${POSTS_PAGE}`, (d) => {
-      setPosts(d.posts);
-      setHasMorePosts(d.posts.length === POSTS_PAGE);
-    });
+    loadFirstPosts();
+    load<{ users: User[] }>('/users/me/following', (d) => setFollowing(d.users));
     load<{ stories: Story[] }>('/stories', (d) => setStories(d.stories));
-    load<{ friends: User[] }>('/friends', (d) => setFriends(d.friends));
-    load<{ requests: FriendRequest[] }>('/friends/requests', (d) => setFriendRequests(d.requests));
-    load<{ requests: FriendRequest[] }>('/friends/requests/sent', (d) => setSentFriendRequests(d.requests));
+    loadFriendsData();
     load<{ conversations: Conversation[] }>('/messages/conversations', (d) => setConversations(d.conversations));
-    load<{ notifications: NotificationItem[] }>(`/notifications?limit=${NOTIFS_PAGE}`, (d) => {
-      setNotifications(d.notifications);
-      setHasMoreNotifications(d.notifications.length === NOTIFS_PAGE);
-    });
+    loadFirstNotifications();
   }, [myId]);
 
   // Vừa chặn ai đó → ẩn ngay bài viết, bạn bè, chat 1-1 của người đó
@@ -106,6 +150,7 @@ function useSocialState() {
     if (blocked.size === 0) return;
     updatePosts((list) => list.filter((p) => !blocked.has(p.author.id)));
     setFriends((list) => list.filter((f) => !blocked.has(f.id)));
+    setFollowing((list) => list.filter((f) => !blocked.has(f.id)));
     setConversations((list) => list.filter((c) => c.isGroup || !c.participants.some((p) => blocked.has(p.id))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockedKey]);
@@ -126,6 +171,10 @@ function useSocialState() {
           return { ...prev, [conversationId]: exists ? list.map((m) => (m.id === message.id ? message : m)) : [...list, message] };
         });
         const fromOther = message.senderId !== myId;
+        if (fromOther && message.kind !== 'system') {
+          socket.emit('message:delivered', { conversationId, messageId: message.id }); // báo cho người gửi: tin đã về tới máy mình
+          setTyping((prev) => ({ ...prev, [conversationId]: (prev[conversationId] || []).filter((u) => u !== message.senderId) })); // họ gửi xong thì thôi "đang gõ"
+        }
         // Người chưa từng nhắn (vd người lạ chưa kết bạn) gửi tin đầu tiên → hội thoại chưa có trong danh sách → tải lại danh sách
         if (!conversationsRef.current.some((c) => c.id === conversationId)) {
           api.get<{ conversations: Conversation[] }>('/messages/conversations').then((d) => setConversations(d.conversations)).catch(() => {});
@@ -139,6 +188,26 @@ function useSocialState() {
         );
         if (fromOther && !message.isRecalled) showToast(`${message.senderName}: ${message.content || 'Đã gửi một tệp đính kèm'}`, 'info');
       },
+      // Người khác bắt đầu / ngừng gõ trong hội thoại (tự tắt sau 5 giây nếu không có tín hiệu mới)
+      typing: ({ conversationId, userId, isTyping }: { conversationId: string; userId: string; isTyping: boolean }) => {
+        const key = `${conversationId}:${userId}`;
+        clearTimeout(typingTimers.current[key]);
+        const remove = () => setTyping((prev) => ({ ...prev, [conversationId]: (prev[conversationId] || []).filter((u) => u !== userId) }));
+        setTyping((prev) => ({ ...prev, [conversationId]: [...(prev[conversationId] || []).filter((u) => u !== userId), ...(isTyping ? [userId] : [])] }));
+        if (isTyping) typingTimers.current[key] = setTimeout(remove, 5000);
+      },
+      // Ai đó online / offline → cập nhật trạng thái ở danh sách bạn bè, đang theo dõi và các hội thoại
+      'presence:update': ({ userId, isOnline, lastActive }: { userId: string; isOnline: boolean; lastActive?: string }) => {
+        const patch = (u: User) => (u.id === userId ? { ...u, isOnline, lastActive } : u);
+        setFriends((list) => list.map(patch));
+        setFollowing((list) => list.map(patch));
+        setConversations((list) => list.map((c) => ({ ...c, participants: c.participants.map(patch) })));
+      },
+      // Người nhận báo đã nhận tin của mình
+      'message:delivered': ({ conversationId, messageId, userId }: { conversationId: string; messageId: string; userId: string }) =>
+        setMessages((prev) =>
+          prev[conversationId] ? { ...prev, [conversationId]: prev[conversationId].map((m) => (m.id === messageId ? { ...m, deliveredTo: [...new Set([...(m.deliveredTo || []), userId])] } : m)) } : prev
+        ),
       'notification:new': (notif: NotificationItem) => {
         setNotifications((list) => [notif, ...list]);
         showToast(`${notif.actor.name} ${notif.content}`, 'info');
@@ -186,6 +255,9 @@ function useSocialState() {
     // ===== Bài viết =====
     posts,
     memoryPosts,
+    tagPosts,
+    postsStatus,
+    reloadPosts: loadFirstPosts,
     hasMorePosts,
     isLoadingMorePosts,
 
@@ -201,6 +273,10 @@ function useSocialState() {
       setIsLoadingMorePosts(false);
     },
 
+    /** Tải các bài có #hashtag (mới nhất trước) cho trang /hashtag/:tag. */
+    loadTagPosts: (tag: string) =>
+      api.get<{ posts: Post[] }>(`/posts?tag=${encodeURIComponent(tag)}&limit=50`).then((d) => setTagPosts(d.posts)).catch(() => setTagPosts([])),
+
     loadMemoryPosts: () => api.get<{ posts: Post[] }>('/posts/memories').then((d) => setMemoryPosts(d.posts)).catch(() => {}),
 
     /** Lấy một bài (khi mở từ thông báo mà bài chưa có trong bảng tin). */
@@ -210,7 +286,7 @@ function useSocialState() {
       return d?.post ?? null;
     },
 
-    createPost: (data: { content: string; images?: string[]; video?: string; privacy: Privacy; feeling?: string; wallOwner?: User; taggedUserIds?: string[] }) =>
+    createPost: (data: { content: string; images?: string[]; video?: string; privacy: Privacy; feeling?: string; location?: string; wallOwner?: User; taggedUserIds?: string[] }) =>
       attempt(async () => {
         const { wallOwner, ...fields } = data;
         const { post } = await api.post<{ post: Post }>('/posts', { ...fields, wallOwnerId: wallOwner?.id });
@@ -218,7 +294,7 @@ function useSocialState() {
         showToast(wallOwner ? `Đã đăng bài lên tường của ${wallOwner.name}!` : 'Đã đăng bài viết thành công!');
       }, 'Không thể đăng bài viết.'),
 
-    updatePost: (postId: string, data: { content: string; privacy: Privacy; feeling?: string; images?: string[] }) =>
+    updatePost: (postId: string, data: { content: string; privacy: Privacy; feeling?: string; location?: string; images?: string[] }) =>
       attempt(async () => {
         replacePost((await api.patch<{ post: Post }>(`/posts/${postId}`, data)).post);
         showToast('Đã cập nhật bài viết!');
@@ -249,9 +325,10 @@ function useSocialState() {
         showToast(post.pinned ? 'Đã ghim bài viết' : 'Đã bỏ ghim bài viết', 'info');
       }, 'Không thể ghim bài viết.'),
 
-    sharePost: (postId: string) =>
+    /** message = lời bình của người chia sẻ (tuỳ chọn). */
+    sharePost: (postId: string, message?: string) =>
       attempt(async () => {
-        const { post } = await api.post<{ post: Post }>(`/posts/${postId}/share`, {});
+        const { post } = await api.post<{ post: Post }>(`/posts/${postId}/share`, message ? { message } : {});
         setPosts((list) => [post, ...list.map((p) => (p.id === postId ? { ...p, sharesCount: p.sharesCount + 1 } : p))]);
         showToast('Đã chia sẻ bài viết lên trang cá nhân của bạn!');
       }, 'Không thể chia sẻ bài viết.'),
@@ -281,11 +358,20 @@ function useSocialState() {
         changeCommentsCount(postId, -1);
       }, 'Không thể xóa bình luận.'),
 
-    toggleLikeComment: (postId: string, commentId: string) =>
+    /** Thả / đổi / bỏ cảm xúc bình luận (cùng loại với cảm xúc hiện tại thì bỏ). */
+    reactToComment: (postId: string, commentId: string, type: ReactionType) =>
       attempt(async () => {
-        const { comment } = await api.post<{ comment: Comment }>(`/comments/${commentId}/like`);
+        const { comment } = await api.post<{ comment: Comment }>(`/comments/${commentId}/react`, { type });
         setComments((prev) => ({ ...prev, [postId]: prev[postId].map((c) => (c.id === commentId ? comment : c)) }));
-      }, 'Không thể thích bình luận.'),
+      }, 'Không thể thả cảm xúc.'),
+
+    /** Sửa nội dung bình luận của mình. Trả về true nếu thành công. */
+    editComment: (postId: string, commentId: string, content: string) =>
+      attempt(async () => {
+        const { comment } = await api.patch<{ comment: Comment }>(`/comments/${commentId}`, { content });
+        setComments((prev) => ({ ...prev, [postId]: prev[postId].map((c) => (c.id === commentId ? comment : c)) }));
+        return true;
+      }, 'Không thể sửa bình luận.'),
 
     // ===== Story =====
     stories,
@@ -300,6 +386,14 @@ function useSocialState() {
     viewStory: (storyId: string) =>
       api.post<{ story: Story }>(`/stories/${storyId}/view`).then((d) => setStories((list) => list.map((s) => (s.id === storyId ? d.story : s)))).catch(() => {}),
 
+    /** Thả cảm xúc nhanh lên story của người khác (cùng emoji thì bỏ, khác emoji thì đổi). */
+    reactToStory: (storyId: string, emoji: string) =>
+      attempt(async () => {
+        const { story } = await api.post<{ story: Story }>(`/stories/${storyId}/react`, { emoji });
+        setStories((list) => list.map((s) => (s.id === storyId ? story : s)));
+        return story.reactions?.some((r) => r.userId === myId) ?? false; // true = vừa thả, false = vừa bỏ
+      }, 'Không thể thả cảm xúc.'),
+
     deleteStory: (storyId: string) =>
       attempt(async () => {
         await api.delete(`/stories/${storyId}`);
@@ -307,7 +401,29 @@ function useSocialState() {
         showToast('Đã xóa Story!', 'info');
       }, 'Không thể xóa Story.'),
 
+    // ===== Theo dõi =====
+    following,
+
+    /** Theo dõi một người; trả về số người theo dõi mới của họ (undefined nếu lỗi). */
+    followUser: (user: User) =>
+      attempt(async () => {
+        const d = await api.post<{ followersCount: number }>(`/users/${user.id}/follow`);
+        setFollowing((list) => [user, ...list.filter((f) => f.id !== user.id)]);
+        showToast(`Đã theo dõi ${user.name}`);
+        return d.followersCount;
+      }, 'Không thể theo dõi.'),
+
+    unfollowUser: (user: User) =>
+      attempt(async () => {
+        const d = await api.delete<{ followersCount: number }>(`/users/${user.id}/follow`);
+        setFollowing((list) => list.filter((f) => f.id !== user.id));
+        showToast(`Đã bỏ theo dõi ${user.name}`, 'info');
+        return d.followersCount;
+      }, 'Không thể bỏ theo dõi.'),
+
     // ===== Bạn bè =====
+    friendsStatus,
+    reloadFriends: loadFriendsData,
     friends,
     friendRequests,
     sentFriendRequests,
@@ -352,6 +468,19 @@ function useSocialState() {
     // ===== Tin nhắn =====
     conversations,
     messages,
+    typingIn: typing,
+
+    /** Báo cho người khác trong hội thoại biết mình đang gõ / ngừng gõ. */
+    sendTyping: (conversationId: string, isTyping: boolean) => void getSocket().emit('typing', { conversationId, isTyping }),
+
+    /** "Xóa với tôi": ẩn tin nhắn phía mình, người khác vẫn thấy. */
+    deleteMessageForMe: (conversationId: string, messageId: string) =>
+      attempt(async () => {
+        await api.post(`/messages/conversations/${conversationId}/messages/${messageId}/delete-for-me`);
+        const rest = (messages[conversationId] || []).filter((m) => m.id !== messageId);
+        setMessages((prev) => ({ ...prev, [conversationId]: rest }));
+        setConversations((list) => list.map((c) => (c.id === conversationId && c.lastMessage?.id === messageId ? { ...c, lastMessage: rest.at(-1) } : c)));
+      }, 'Không thể xóa tin nhắn.'),
 
     /** Tải tin nhắn của hội thoại (server đồng thời đánh dấu đã đọc → số chưa đọc về 0). */
     loadMessages: async (conversationId: string) => {
@@ -367,6 +496,31 @@ function useSocialState() {
         upsertMessage(conversationId, message);
         setLastMessage(conversationId, message);
       }, 'Không thể gửi tin nhắn.'),
+
+    /** Chủ bài tắt / bật bình luận. */
+    toggleComments: (postId: string) =>
+      attempt(async () => {
+        const { post } = await api.post<{ post: Post }>(`/posts/${postId}/toggle-comments`);
+        replacePost(post);
+        showToast(post.commentsDisabled ? 'Đã tắt bình luận cho bài viết' : 'Đã bật lại bình luận', 'info');
+      }, 'Không thể thay đổi cài đặt bình luận.'),
+
+    /** Ẩn bài khỏi bảng tin của mình; toast có nút "Hoàn tác" đưa bài trở lại đúng vị trí cũ. */
+    hidePost: (postId: string) =>
+      attempt(async () => {
+        const index = posts.findIndex((p) => p.id === postId);
+        const hidden = posts[index];
+        await api.post(`/posts/${postId}/hide`);
+        updatePosts((list) => list.filter((p) => p.id !== postId));
+        showToast('Đã ẩn bài viết. Bạn sẽ ít thấy những bài như vậy hơn.', 'info', {
+          label: 'Hoàn tác',
+          onClick: async () => {
+            await api.delete(`/posts/${postId}/hide`).catch(() => {});
+            if (hidden) setPosts((list) => [...list.slice(0, index), hidden, ...list.slice(index)]);
+            setToast(null);
+          },
+        });
+      }, 'Không thể ẩn bài viết.'),
 
     sharePostToChat: (conversationId: string, postId: string) =>
       attempt(async () => {
@@ -414,6 +568,8 @@ function useSocialState() {
 
     // ===== Thông báo =====
     notifications,
+    notificationsStatus,
+    reloadNotifications: loadFirstNotifications,
     hasMoreNotifications,
 
     loadMoreNotifications: async () => {

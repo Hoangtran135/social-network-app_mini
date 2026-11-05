@@ -9,7 +9,8 @@ import { useChatWindows } from '../context/ChatWindowsContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { User } from '../types';
 import { api } from '../utils/api';
-import { EmptyState, PageLoading, TabButton } from '../components/ui';
+import { EmptyState, PageLoading, TabButton, AvatarFrame } from '../components/ui';
+import { SOCIAL_PLATFORMS } from '../utils/socialLinks';
 import { CreatePostBox } from '../components/post/CreatePostBox';
 import { PostCard } from '../components/post/PostCard';
 import { PostFormModal } from '../components/post/PostFormModal';
@@ -36,7 +37,7 @@ export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [params] = useSearchParams();
   const { currentUser, blockUser } = useAuth();
-  const { posts, friends, getUserFriends, getOrCreateConversation } = useSocial();
+  const { posts, friends, following, followUser, unfollowUser, getUserFriends, getOrCreateConversation } = useSocial();
   const { openChat } = useChatWindows();
   const confirm = useConfirm();
 
@@ -44,6 +45,7 @@ export const ProfilePage: React.FC = () => {
   const [userFriends, setUserFriends] = useState<User[]>([]);
   const [tab, setTab] = useState<Tab>(toTab(params.get('tab')));
   const [isPosting, setIsPosting] = useState(false);
+  const [stats, setStats] = useState<{ followersCount: number; followingCount: number } | null>(null);
   const isMe = id === currentUser?.id;
   const tabParam = params.get('tab');
 
@@ -65,6 +67,17 @@ export const ProfilePage: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isMe]);
+
+  // Số người theo dõi / đang theo dõi (cả của mình)
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setStats(null);
+    api.get<{ followersCount: number; followingCount: number }>(`/users/${id}/follow-stats`).then((d) => !cancelled && setStats(d)).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   // Của mình: dùng luôn dữ liệu đã có (tự cập nhật khi sửa hồ sơ / kết bạn)
   useEffect(() => {
@@ -89,6 +102,7 @@ export const ProfilePage: React.FC = () => {
   const userPosts = posts.filter((p) => p.author.id === user.id || p.wallOwnerId === user.id).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
   const photos = userPosts.flatMap((p) => p.images || []);
   const joined = new Date(user.joinDate).toLocaleDateString('vi-VN');
+  const links = SOCIAL_PLATFORMS.filter((p) => user.socialLinks?.[p.key]);
   const info: [string, React.ReactNode][] = [
     ['Tiểu sử', user.bio],
     ['Nơi làm việc', user.workplace],
@@ -108,7 +122,9 @@ export const ProfilePage: React.FC = () => {
 
         <div className="px-4 sm:px-6 pb-4 sm:pb-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-4">
-            <img src={user.avatar} alt="" className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-xl bg-slate-200 shrink-0" />
+            <AvatarFrame frame={user.avatarFrame} className="shadow-xl">
+              <img src={user.avatar} alt="" className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white bg-slate-200 shrink-0" />
+            </AvatarFrame>
             <div className="flex gap-2 flex-wrap justify-center">
               {isMe ? (
                 <Link to="/settings/profile" className="btn-primary flex items-center gap-1.5">
@@ -117,6 +133,16 @@ export const ProfilePage: React.FC = () => {
               ) : (
                 <>
                   <FriendButton user={user} />
+                  <button
+                    onClick={async () => {
+                      const count = following.some((f) => f.id === user.id) ? await unfollowUser(user) : await followUser(user);
+                      if (count !== undefined) setStats((s) => ({ followingCount: s?.followingCount ?? 0, followersCount: count }));
+                    }}
+                    aria-pressed={following.some((f) => f.id === user.id)}
+                    className={following.some((f) => f.id === user.id) ? 'btn-secondary' : 'btn-primary'}
+                  >
+                    {following.some((f) => f.id === user.id) ? 'Đang theo dõi' : 'Theo dõi'}
+                  </button>
                   <button onClick={async () => openChat(await getOrCreateConversation(user))} className="btn-secondary flex items-center gap-1.5">
                     <MessageCircle className="w-4 h-4" /> Nhắn tin
                   </button>
@@ -137,8 +163,25 @@ export const ProfilePage: React.FC = () => {
             <h1 className="text-2xl font-black text-slate-900 break-words">{user.name}</h1>
             <p className="text-xs text-slate-500">@{user.username}</p>
             {user.bio && <p className="text-sm text-slate-700 mt-2.5 whitespace-pre-line break-words">{user.bio}</p>}
+            {links.length > 0 && (
+              <ul aria-label="Mạng xã hội" className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+                {links.map(({ key, label, icon: Icon }) => (
+                  <li key={key}>
+                    <a href={user.socialLinks![key]} target="_blank" rel="noreferrer noopener nofollow" aria-label={label} title={label} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-600 text-slate-600 flex items-center justify-center transition-colors">
+                      <Icon className="w-4 h-4" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p className="text-xs text-slate-500 mt-2">
               <b className="text-slate-700">{userFriends.length}</b> bạn bè · <b className="text-slate-700">{userPosts.length}</b> bài viết
+              {stats && (
+                <>
+                  {' · '}
+                  <b className="text-slate-700">{isMe ? following.length : stats.followingCount}</b> đang theo dõi · <b className="text-slate-700">{stats.followersCount}</b> người theo dõi
+                </>
+              )}
             </p>
           </div>
 
