@@ -4,6 +4,8 @@ Website mạng xã hội full-stack: đăng bài, kết bạn, nhắn tin realti
 
 Repo: https://github.com/Hoangtran135/social-network-app_mini.git
 
+> Danh sách đầy đủ chức năng hiện có: [FEATURES.md](FEATURES.md) · Ý tưởng phát triển tiếp: [FEATURE_IDEAS.md](FEATURE_IDEAS.md)
+
 ## Công nghệ sử dụng
 
 - **Frontend:** React 19, TypeScript, React Router 7, Tailwind CSS 4, Socket.IO Client
@@ -55,24 +57,25 @@ Repo: https://github.com/Hoangtran135/social-network-app_mini.git
 | `npm run build` | Build frontend (Vite) + bundle backend (esbuild) ra `dist/` |
 | `npm run start` | Chạy bản production đã build (`dist/server.cjs`) |
 | `npm run lint` | Kiểm tra code bằng ESLint |
-| `npm run make-admin -- <email>` | Cấp quyền admin cho tài khoản theo email |
 
 ## Quản lý dữ liệu demo (thư mục `db/`)
 
 | Script | Mô tả |
 |---|---|
 | `npx tsx db/seed-demo.ts` | **Xoá sạch** dữ liệu hiện có và tạo lại bộ data demo mẫu (users, bài viết, nhóm, story, tin nhắn...) |
+| `npm run db:seed-bulk` | **Thêm** (không xoá gì) 500 tài khoản + 10.000 bài viết cùng bạn bè, theo dõi, 30 nhóm, 20 trang, 400 reel, ~15.000 bình luận để thử hiệu năng / tìm kiếm. Tài khoản `bulk0001@seed.local` … `bulk0500@seed.local`, mật khẩu `123456`. Đã có dữ liệu thì dừng (không tạo trùng) |
+| `npm run db:seed-bulk -- --reset` | Xoá đúng dữ liệu do `db:seed-bulk` tạo (không đụng dữ liệu khác) |
+| `npm run make-admin -- email@vd.vn` | Cấp quyền quản trị hệ thống cho tài khoản (thêm `--revoke` để thu hồi) |
 | `npx tsx db/export-json.ts` | Export toàn bộ dữ liệu MongoDB hiện tại ra JSON (thư mục `db/export/`) |
 | `npx tsx db/import-json.ts` | Import dữ liệu từ `db/export/` vào MongoDB (mặc định xoá dữ liệu cũ trước; đặt `DROP_EXISTING=false` để chỉ chèn thêm) |
-| `npx tsx db/make-admin.ts <email>` | Cấp quyền admin cho user theo email |
 
 Tài khoản demo có sẵn trong `db/export/` (mật khẩu chung: `123456`):
-- Admin: `minhanh@demo.vn`
+- Admin: `minhanh@demo.vn` (bộ `db/export/`); trên DB dev hiện tại `xuanhoang@demo.vn` cũng là admin. Cấp quyền cho tài khoản khác: `npm run make-admin -- email@vd.vn` (`--revoke` để thu hồi)
 - User thường: `quocbao@demo.vn`, `camle@demo.vn`, `ducduy@demo.vn`, `thuha@demo.vn`, `anhkhoa@demo.vn`, `ngoclinh@demo.vn`, `giaphuc@demo.vn`
 
 ## Kiểm thử (thư mục `tests/`)
 
-Bộ test dùng **Vitest** (hơn 3100 test, phủ 100% dòng lệnh của `server/` và `src/`), gồm:
+Bộ test dùng **Vitest** (hơn 3900 test; độ phủ: câu lệnh / dòng ~99,9%, nhánh ≥ 98%, hàm ≥ 95% của `server/` và `src/`), gồm:
 
 - `tests/server/` — test API + realtime của server (supertest, socket.io-client): tài khoản, người dùng, bạn bè, bài viết, bình luận, tin nhắn, story, thông báo, bảo mật, upload, tình huống đồng thời và quyền riêng tư của sự kiện realtime.
 - `tests/client/` — test giao diện bằng Testing Library + jsdom. Ngoài test từng mảnh nhỏ, còn có test **tích hợp toàn ứng dụng**: render trang thật với Context thật trước một backend giả trong bộ nhớ (`fakeServer.ts`) — đăng nhập, bảng tin, bài viết, bình luận, chat, story, hồ sơ, bạn bè, thông báo, cài đặt, realtime…
