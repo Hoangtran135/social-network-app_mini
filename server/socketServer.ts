@@ -1,7 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
-import { getUserIdFromToken } from './jwtAuth';
+import { getUserIdFromToken, getAccountState, BANNED_MESSAGE } from './jwtAuth';
 import { UserModel } from './models/User';
 import { ConversationModel } from './models/Conversation';
 import { MessageModel } from './models/Message';
@@ -16,6 +16,11 @@ import { MessageModel } from './models/Message';
 // - "Đã nhận": client gửi "message:delivered" { conversationId, messageId } khi tin về tới máy → server ghi lại và báo cho người gửi.
 
 let io: Server | null = null;
+
+/** Ngắt mọi kết nối realtime của một người (khi tài khoản bị khoá). */
+export function disconnectUser(userId: string) {
+  io?.in(`user:${userId}`).disconnectSockets(true);
+}
 
 export function emitToUser(userId: string, event: string, payload: unknown) {
   io?.to(`user:${userId}`).emit(event, payload);
@@ -73,9 +78,11 @@ export function setupSocketServer(httpServer: HttpServer) {
   io = new Server(httpServer, { cors: { origin: true, credentials: true } });
 
   // Kiểm tra token một lần lúc kết nối
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const userId = getUserIdFromToken(socket.handshake.auth?.token);
-    if (!userId) return next(new Error('Phiên đăng nhập không hợp lệ.'));
+    const account = userId ? await getAccountState(userId) : null;
+    if (!userId || !account) return next(new Error('Phiên đăng nhập không hợp lệ.'));
+    if (account.banned) return next(new Error(BANNED_MESSAGE));
     socket.data.userId = userId;
     next();
   });

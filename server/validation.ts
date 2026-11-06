@@ -1,5 +1,6 @@
 import { z, ZodType } from 'zod';
 import { PAGE_CATEGORIES } from './models/Page';
+import { REPORT_TARGETS, REPORT_REASONS } from './models/Report';
 import { Request, Response, NextFunction } from 'express';
 
 // Kiểm tra dữ liệu client gửi lên (req.body) trước khi vào route, dùng thư viện Zod.
@@ -192,3 +193,10 @@ export const createGroupPostSchema = z.object({
 });
 export const reportGroupPostSchema = z.object({ reason: text(300).default('') });
 export const resolveReportSchema = z.object({ action: z.enum(['dismiss', 'remove']) });
+
+// ----- Quản trị hệ thống & báo cáo vi phạm
+export const createReportSchema = z.object({ targetType: z.enum(REPORT_TARGETS), targetId: id, reason: z.enum(REPORT_REASONS), description: text(1000).default('') });
+export const banUserSchema = z.object({ banned: z.boolean(), reason: text(500).default('') });
+export const setUserRoleSchema = z.object({ role: z.enum(['user', 'admin']) });
+export const handleReportSchema = z.object({ status: z.enum(['resolved', 'dismissed']), note: text(500).default(''), removeContent: z.boolean().default(false) });
+export const announcementSchema = z.object({ title: text(100).min(1), message: text(1000).min(1), type: z.enum(['info', 'warning', 'alert']).default('info') });

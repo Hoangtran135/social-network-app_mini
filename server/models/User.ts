@@ -37,6 +37,11 @@ const userSchema = new Schema(
     verifyTokenHash: String,
     verifyTokenExpires: Date,
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // Quản trị hệ thống: 'admin' vào được trang /admin. Tài khoản bị khoá (banned) không đăng nhập / dùng API / kết nối realtime được.
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    banned: { type: Boolean, default: false },
+    banReason: String,
+    bannedAt: Date,
   },
   // Tự lưu thời điểm tạo tài khoản vào trường joinDate
   { timestamps: { createdAt: 'joinDate', updatedAt: false } }

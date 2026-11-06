@@ -3,7 +3,6 @@ import { GroupModel } from '../../models/Group';
 import { GroupMemberModel, ROLE_RANK } from '../../models/GroupMember';
 import { GroupReportModel } from '../../models/GroupReport';
 import { PostModel } from '../../models/Post';
-import { CommentModel } from '../../models/Comment';
 import { validate, createGroupSchema, updateGroupSchema, joinGroupSchema } from '../../validation';
 import { groupToJson, getId, Doc } from '../../formatResponse';
 import { isBlockedBetween } from '../../privacyRules';
@@ -11,6 +10,7 @@ import { isGroupAdmin } from '../../groupRules';
 import { pageParams } from '../../pagination';
 import { withGroup, requireAdmin, requireOwner, notifyAdmins, bumpMembers } from './middleware';
 import { escapeRegex } from '../../regex';
+import { removeGroup } from '../../contentRemoval';
 
 // Nhóm: danh sách, tạo, xem, sửa, xoá; tham gia / rời nhóm.
 
@@ -70,10 +70,7 @@ export function registerGroupCore(router: Router) {
   /** Xoá nhóm (chủ nhóm): xoá cả thành viên, bài viết, bình luận và báo cáo. */
   router.delete('/:id', withGroup, requireOwner, async (_req, res) => {
     const { group } = res.locals;
-    const postIds = (await PostModel.find({ group: group._id }).select('_id')).map((p: Doc) => p._id);
-    await CommentModel.deleteMany({ post: { $in: postIds } });
-    await Promise.all([PostModel.deleteMany({ group: group._id }), GroupReportModel.deleteMany({ group: group._id }), GroupMemberModel.deleteMany({ group: group._id })]);
-    await group.deleteOne();
+    await removeGroup(group);
     res.json({ ok: true });
   });
 

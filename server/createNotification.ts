@@ -10,7 +10,7 @@ export async function createNotification(data: {
   type: 'like' | 'comment' | 'friend_request' | 'friend_accept' | 'system';
   content: string;
   targetId?: string; // bấm vào thông báo thì mở bài viết / trang cá nhân này
-  targetType?: 'post' | 'profile' | 'group' | 'page';
+  targetType?: 'post' | 'profile' | 'group' | 'page' | 'system'; // 'system' = thông báo từ quản trị hệ thống (giao diện hiện "Hệ thống" thay vì tên người)
 }) {
   const notification = await NotificationModel.create(data);
   await notification.populate('actor');

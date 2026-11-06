@@ -13,6 +13,7 @@ import { pageParams } from '../pagination';
 import { extractHashtags } from '../hashtags';
 import { POPULATE } from './posts.routes';
 import { escapeRegex } from '../regex';
+import { removePage } from '../contentRemoval';
 
 // API Trang / fanpage (/api/pages): danh sách (của tôi / đang theo dõi / khám phá), tạo, xem, sửa, xoá trang,
 // theo dõi / bỏ theo dõi, quản trị viên (chủ trang thêm / gỡ), đăng bài với tư cách trang và xoá bài của trang.
@@ -86,10 +87,7 @@ pagesRouter.patch('/:id', withPage, requirePageAdmin, validate(updatePageSchema)
 /** Xoá trang (chủ trang): xoá cả bài viết, bình luận và lượt theo dõi. */
 pagesRouter.delete('/:id', withPage, requirePageOwner, async (_req, res) => {
   const { page } = res.locals;
-  const postIds = (await PostModel.find({ page: page._id }).select('_id')).map((p: Doc) => p._id);
-  await CommentModel.deleteMany({ post: { $in: postIds } });
-  await Promise.all([PostModel.deleteMany({ page: page._id }), PageFollowModel.deleteMany({ page: page._id })]);
-  await page.deleteOne();
+  await removePage(page);
   res.json({ ok: true });
 });
 

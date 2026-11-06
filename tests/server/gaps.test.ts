@@ -113,16 +113,24 @@ describe('jwtAuth — cấu hình production', () => {
 describe('socketServer — phát sự kiện', () => {
   let server: http.Server;
   let url: string;
+  let ids: string[];
   beforeAll(async () => {
+    await connectTestDb(); // socket kiểm tra tài khoản trong DB → cần người dùng thật
+    const app = buildApp();
+    ids = (await Promise.all(['a1', 'b1', 'a2', 'b2'].map((l) => signUp(app, l)))).map((u) => u.id);
     server = http.createServer();
     setupSocketServer(server);
     await new Promise<void>((resolve) => server.listen(0, resolve));
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
-  afterAll(() => new Promise((resolve) => server.close(resolve)));
+  afterAll(async () => {
+    await new Promise((resolve) => server.close(resolve));
+    await disconnectTestDb();
+  });
 
-  const client = async (id: string) => {
-    const socket = connect(url, { auth: { token: createToken(id) }, transports: ['websocket'], forceNew: true });
+  const idOf = (label: string) => ids[['a1', 'b1', 'a2', 'b2'].indexOf(label)];
+  const client = async (label: string) => {
+    const socket = connect(url, { auth: { token: createToken(idOf(label)) }, transports: ['websocket'], forceNew: true });
     const got: unknown[] = [];
     socket.on('hello', (p) => got.push(p));
     await new Promise<void>((resolve) => socket.on('connect', () => resolve()));
@@ -134,7 +142,7 @@ describe('socketServer — phát sự kiện', () => {
     const a = await client('a1');
     const b = await client('b1');
     emitToEveryone('hello', 1);
-    emitToEveryone('hello', 2, 'a1');
+    emitToEveryone('hello', 2, idOf('a1'));
     await new Promise((r) => setTimeout(r, 150));
     expect(a.got).toEqual([1]);
     expect(b.got).toEqual([1, 2]);
@@ -145,8 +153,8 @@ describe('socketServer — phát sự kiện', () => {
   it('emitToUser / emitToUsers chỉ tới đúng người; danh sách rỗng không lỗi', async () => {
     const a = await client('a2');
     const b = await client('b2');
-    emitToUser('a2', 'hello', 'riêng a');
-    emitToUsers(['b2'], 'hello', 'riêng b');
+    emitToUser(idOf('a2'), 'hello', 'riêng a');
+    emitToUsers([idOf('b2')], 'hello', 'riêng b');
     emitToUsers([], 'hello', 'không ai');
     await new Promise((r) => setTimeout(r, 150));
     expect(a.got).toEqual(['riêng a']);
@@ -228,10 +236,9 @@ describe('Route — các trường hợp hiếm', () => {
     expect(after.body.users.some((u: { id: string }) => u.id === me.id)).toBe(false);
   });
 
-  it('token hợp lệ nhưng người dùng đã bị xoá: danh sách chặn rỗng, không lỗi', async () => {
+  it('token hợp lệ nhưng người dùng đã bị xoá → 401', async () => {
     const res = await as(app, { token: createToken(bogusId) }).get('/api/users/me/blocked');
-    expect(res.status).toBe(200);
-    expect(res.body.users).toEqual([]);
+    expect(res.status).toBe(401);
   });
 
   it('ghim bài không tồn tại → 404', async () => {

@@ -152,9 +152,9 @@ describe('Token / phiên đăng nhập', () => {
     expect((await request(app).get('/api/auth/me').set('Authorization', u.token)).status).toBe(401);
   });
 
-  it('token hợp lệ nhưng người dùng đã bị xoá → 404', async () => {
+  it('token hợp lệ nhưng người dùng đã bị xoá → 401', async () => {
     const res = await as(app, { token: createToken(bogusId) }).get('/api/auth/me');
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 
   it('đăng xuất → chuyển offline và có lastActive', async () => {

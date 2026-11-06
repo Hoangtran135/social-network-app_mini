@@ -180,10 +180,10 @@ describe('Gửi lại email xác minh', () => {
     expect((await as(app, legacy).post('/api/auth/resend-verification')).status).toBe(400);
   });
 
-  it('chưa đăng nhập → 401; token của người đã bị xoá → 404', async () => {
+  it('chưa đăng nhập → 401; token của người đã bị xoá → 401', async () => {
     expect((await request(app).post('/api/auth/resend-verification')).status).toBe(401);
     const { createToken } = await import('../../server/jwtAuth');
-    expect((await as(app, { token: createToken('64b0f0f0f0f0f0f0f0f0f0f0') }).post('/api/auth/resend-verification')).status).toBe(404);
+    expect((await as(app, { token: createToken('64b0f0f0f0f0f0f0f0f0f0f0') }).post('/api/auth/resend-verification')).status).toBe(401);
   });
 
   it('gửi lại bị lỗi SMTP → vẫn trả ok (đã ghi log), không 500', async () => {

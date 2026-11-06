@@ -10,6 +10,8 @@ import { commentsRouter } from "./routes/comments.routes";
 import { groupsRouter } from "./routes/groups";
 import { pagesRouter } from "./routes/pages.routes";
 import { reelsRouter } from "./routes/reels.routes";
+import { adminRouter } from "./routes/admin";
+import { reportsRouter } from "./routes/reports.routes";
 import { searchRouter } from "./routes/search.routes";
 import { friendsRouter } from "./routes/friends.routes";
 import { notificationsRouter } from "./routes/notifications.routes";
@@ -50,6 +52,8 @@ export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}) 
   app.use("/api/pages", pagesRouter);
   app.use("/api/reels", reelsRouter);
   app.use("/api/search", searchRouter);
+  app.use("/api/reports", reportsRouter);
+  app.use("/api/admin", adminRouter);
   app.use("/api/friends", friendsRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/messages", messagesRouter);

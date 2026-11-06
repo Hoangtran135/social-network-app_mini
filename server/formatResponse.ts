@@ -42,7 +42,7 @@ export function userToJson(u: Doc) {
 /** Thông tin của chính mình: như trên + danh sách người mình đã chặn. */
 export function meToJson(u: Doc) {
   const base = userToJson(u);
-  return base && { ...base, email: u.email, blockedUserIds: (u.blockedUsers || []).map(getId), emailVerified: u.emailVerified !== false };
+  return base && { ...base, email: u.email, role: u.role === 'admin' ? 'admin' : 'user', blockedUserIds: (u.blockedUsers || []).map(getId), emailVerified: u.emailVerified !== false };
 }
 
 /** viewerId: người đang xem, để biết họ đã lưu bài này chưa (isSaved). */

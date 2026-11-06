@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { UserModel } from '../models/User';
-import { createToken, requireAuth } from '../jwtAuth';
+import { createToken, requireAuth, BANNED_MESSAGE } from '../jwtAuth';
 import { meToJson } from '../formatResponse';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../email';
 import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema } from '../validation';
@@ -51,6 +51,7 @@ authRouter.post('/login', validate(loginSchema), async (req, res) => {
   if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
     return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác.' });
   }
+  if (user.banned) return res.status(403).json({ error: user.banReason ? `${BANNED_MESSAGE} Lý do: ${user.banReason}` : BANNED_MESSAGE, code: 'banned' });
   user.isOnline = true;
   user.lastActive = undefined;
   await user.save();

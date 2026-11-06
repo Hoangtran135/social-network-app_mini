@@ -14,7 +14,8 @@
     "test:client": "vitest run tests/client",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "db:seed-bulk": "tsx db/seed-bulk.ts"
+    "db:seed-bulk": "tsx db/seed-bulk.ts",
+    "make-admin": "tsx db/make-admin.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
