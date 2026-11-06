@@ -213,3 +213,42 @@ describe('Bài viết / story realtime tuân theo quyền riêng tư', () => {
     expect(inboxA['friend:removed']).toEqual([{ userId: b.id }]);
   });
 });
+
+describe('Sửa bình luận realtime', () => {
+  it('sửa bình luận → chủ bài và người được gắn thẻ nhận comment:update; người sửa và người ngoài thì không', async () => {
+    const owner = await signUp(app);
+    const author = await signUp(app);
+    const tagged = await signUp(app);
+    const outsider = await signUp(app);
+    const post = await createPost(app, owner);
+    const created = await as(app, author).post('/api/comments').send({ postId: post.id, content: 'Hello', taggedUserIds: [tagged.id] });
+    const commentId = created.body.comment.id;
+    const ownerEvents = await listen(owner, ['comment:update']);
+    const taggedEvents = await listen(tagged, ['comment:update']);
+    const authorEvents = await listen(author, ['comment:update']);
+    const outsiderEvents = await listen(outsider, ['comment:update']);
+
+    expect((await as(app, author).patch(`/api/comments/${commentId}`).send({ content: 'Hello bạn' })).status).toBe(200);
+    await settle();
+    for (const events of [ownerEvents, taggedEvents]) {
+      expect(events['comment:update']).toHaveLength(1);
+      expect(events['comment:update'][0]).toMatchObject({ postId: post.id, comment: { id: commentId, content: 'Hello bạn' } });
+    }
+    expect(authorEvents['comment:update']).toHaveLength(0);
+    expect(outsiderEvents['comment:update']).toHaveLength(0);
+  });
+
+  it('chủ bài tự sửa bình luận của mình trên bài của mình → không nhận lại sự kiện; bài đã bị xoá vẫn sửa được', async () => {
+    const owner = await signUp(app);
+    const post = await createPost(app, owner);
+    const created = await as(app, owner).post('/api/comments').send({ postId: post.id, content: 'Một' });
+    const events = await listen(owner, ['comment:update']);
+    await as(app, owner).patch(`/api/comments/${created.body.comment.id}`).send({ content: 'Hai' });
+    await settle();
+    expect(events['comment:update']).toHaveLength(0);
+
+    const { PostModel } = await import('../../server/models/Post');
+    await PostModel.deleteOne({ _id: post.id });
+    expect((await as(app, owner).patch(`/api/comments/${created.body.comment.id}`).send({ content: 'Ba' })).status).toBe(200);
+  });
+});

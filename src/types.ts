@@ -119,6 +119,7 @@ export interface Conversation {
   avatar?: string;
   participants: User[];
   nicknames?: Record<string, string>; // { userId: biệt danh }
+  themeColor?: string; // màu chủ đề chung của cuộc trò chuyện
   lastMessage?: Message;
   unreadCount: number;
   updatedAt: string;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useSocial } from '../context/SocialContext';
+import { useOpenNotification } from '../hooks/useOpenNotification';
 
 // Thông báo nhỏ hiện vài giây ở góc màn hình (vd "Đã đăng bài viết!").
 // Nội dung lấy từ SocialContext; ở bất kỳ đâu gọi showToast('...') là hiện.
@@ -13,7 +14,8 @@ const STYLES = {
 };
 
 export const Toast: React.FC = () => {
-  const { toast } = useSocial();
+  const { toast, dismissToast } = useSocial();
+  const openNotification = useOpenNotification();
   if (!toast) return null;
   const { color, Icon } = STYLES[toast.type];
 
@@ -21,7 +23,20 @@ export const Toast: React.FC = () => {
     <div role={toast.type === 'error' ? 'alert' : 'status'} className="fixed bottom-20 sm:bottom-6 right-4 left-4 sm:right-auto sm:left-6 z-[70] pointer-events-none">
       <div className={`animate-pop flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium sm:max-w-sm ${color}`}>
         <Icon className="w-5 h-5 shrink-0" />
-        <span className="min-w-0 break-words">{toast.message}</span>
+        {toast.notification ? (
+          // Toast của một thông báo: bấm vào là mở đúng nội dung (bài viết, hồ sơ, nhóm...) rồi tắt toast
+          <button
+            onClick={() => {
+              openNotification(toast.notification!);
+              dismissToast();
+            }}
+            className="pointer-events-auto min-w-0 flex-1 text-left break-words hover:underline"
+          >
+            {toast.message}
+          </button>
+        ) : (
+          <span className="min-w-0 break-words">{toast.message}</span>
+        )}
         {toast.action && (
           <button onClick={toast.action.onClick} className="pointer-events-auto ml-1 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-semibold shrink-0">
             {toast.action.label}

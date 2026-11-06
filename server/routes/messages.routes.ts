@@ -7,7 +7,7 @@ import { requireAuth } from '../jwtAuth';
 import {
   validate,
   createConversationSchema,
-  setNicknameSchema,
+  setNicknameSchema, setThemeSchema,
   sendMessageSchema,
   reactMessageSchema,
   sharePostToChatSchema,
@@ -30,6 +30,14 @@ function broadcastMessage(conv: Doc, message: unknown, exceptUserId?: string) {
   getMemberIds(conv)
     .filter((id) => id !== exceptUserId)
     .forEach((id) => emitToUser(id, 'message:new', { conversationId: conv.id, message }));
+}
+
+/** Báo cho mọi thành viên (trừ người vừa đổi) thông tin hội thoại mới: biệt danh, màu chủ đề... để cả hai bên thấy giống nhau ngay. */
+function broadcastConversationUpdate(conv: Doc, exceptUserId: string) {
+  const conversation = conversationToJson(conv);
+  getMemberIds(conv)
+    .filter((id) => id !== exceptUserId)
+    .forEach((id) => emitToUser(id, 'conversation:update', { conversation }));
 }
 
 /** Tạo tin nhắn hệ thống */
@@ -141,6 +149,21 @@ messagesRouter.patch('/conversations/:id/nickname', validate(setNicknameSchema),
     : `${actor?.name} đã xóa biệt danh của ${who}.`;
   const systemMessage = await createSystemMessage(conv.id, text);
   res.json({ conversation: conversationToJson(conv), systemMessage: messageToJson(systemMessage) });
+  broadcastConversationUpdate(conv, req.userId);
+  broadcastMessage(conv, messageToJson(systemMessage, getMemberIds(conv)), req.userId);
+});
+
+/** Đổi màu chủ đề (áp dụng cho mọi thành viên của cuộc trò chuyện) */
+messagesRouter.patch('/conversations/:id/theme', validate(setThemeSchema), requireMember, async (req, res) => {
+  const conv = res.locals.conv;
+  conv.themeColor = req.body.color;
+  await conv.save();
+  await conv.populate('participants');
+  const actor = await UserModel.findById(req.userId);
+  const systemMessage = await createSystemMessage(conv.id, `${actor?.name} đã đổi màu chủ đề của cuộc trò chuyện.`);
+  res.json({ conversation: conversationToJson(conv), systemMessage: messageToJson(systemMessage) });
+  broadcastConversationUpdate(conv, req.userId);
+  broadcastMessage(conv, messageToJson(systemMessage, getMemberIds(conv)), req.userId);
 });
 
 /** Lấy tin nhắn của hội thoại */

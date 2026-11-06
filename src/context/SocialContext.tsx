@@ -40,15 +40,15 @@ function useSocialState() {
   conversationsRef.current = conversations;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: { label: string; onClick: () => void } } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: { label: string; onClick: () => void }; notification?: NotificationItem } | null>(null);
   const [tagPosts, setTagPosts] = useState<Post[]>([]); // bài của trang #hashtag đang mở
 
   // ---------- Hàm tiện ích dùng chung ----------
 
-  /** action = nút trên toast (vd "Hoàn tác"); toast có nút hiện lâu hơn để kịp bấm. */
-  const showToast = (message: string, type: ToastType = 'success', action?: { label: string; onClick: () => void }) => {
-    setToast({ message, type, action });
-    setTimeout(() => setToast(null), action ? 6000 : 3500);
+  /** action = nút trên toast (vd "Hoàn tác"); notification = toast của một thông báo, bấm vào là mở đúng nội dung. Toast bấm được hiện lâu hơn để kịp bấm. */
+  const showToast = (message: string, type: ToastType = 'success', action?: { label: string; onClick: () => void }, notification?: NotificationItem) => {
+    setToast({ message, type, action, notification });
+    setTimeout(() => setToast(null), action || notification ? 6000 : 3500);
   };
 
   /** Chạy một thao tác; lỗi thì hiện toast đỏ (ưu tiên câu báo lỗi của server). Trả về kết quả, hoặc undefined nếu lỗi. */
@@ -211,10 +211,11 @@ function useSocialState() {
         ),
       'notification:new': (notif: NotificationItem) => {
         setNotifications((list) => [notif, ...list]);
-        showToast(notificationPlain(notif), 'info');
+        showToast(notificationPlain(notif), 'info', undefined, notif);
         if (notif.type === 'friend_accept') {
           setSentFriendRequests((list) => list.filter((r) => r.receiverId !== notif.actor.id));
           setFriends((list) => [notif.actor, ...list.filter((f) => f.id !== notif.actor.id)]);
+          setFollowing((list) => [notif.actor, ...list.filter((f) => f.id !== notif.actor.id)]); // kết bạn = tự động theo dõi nhau
         }
         // Thông báo không kèm lời mời → tải lại danh sách để có id lời mời (dùng cho nút Chấp nhận / Từ chối)
         if (notif.type === 'friend_request') {
@@ -231,6 +232,9 @@ function useSocialState() {
         setComments((prev) => ({ ...prev, [postId]: [...(prev[postId] || []).filter((c) => c.id !== comment.id), comment] }));
         changeCommentsCount(postId, 1);
       },
+      // Bình luận được sửa → thay nội dung mới (chỉ khi mình đang có danh sách bình luận của bài đó)
+      'comment:update': ({ postId, comment }: { postId: string; comment: Comment }) =>
+        setComments((prev) => (prev[postId] ? { ...prev, [postId]: prev[postId].map((c) => (c.id === comment.id ? comment : c)) } : prev)),
       'comment:delete': ({ postId, commentId }: { postId: string; commentId: string }) => {
         setComments((prev) => ({ ...prev, [postId]: (prev[postId] || []).filter((c) => c.id !== commentId) }));
         changeCommentsCount(postId, -1);
@@ -239,6 +243,9 @@ function useSocialState() {
       'story:delete': ({ storyId }: { storyId: string }) => setStories((list) => list.filter((s) => s.id !== storyId)),
       'friend-request:rejected': ({ requestId }: { requestId: string }) => setSentFriendRequests((list) => list.filter((r) => r.id !== requestId)),
       'friend-request:cancelled': ({ requestId }: { requestId: string }) => setFriendRequests((list) => list.filter((r) => r.id !== requestId)),
+      // Người kia đổi biệt danh / màu chủ đề → cập nhật ngay, giữ nguyên tin cuối và số chưa đọc của mình
+      'conversation:update': ({ conversation }: { conversation: Conversation }) =>
+        setConversations((list) => list.map((c) => (c.id === conversation.id ? { ...c, nicknames: conversation.nicknames, themeColor: conversation.themeColor, name: conversation.name, avatar: conversation.avatar } : c))),
       'friend:removed': ({ userId }: { userId: string }) => setFriends((list) => list.filter((f) => f.id !== userId)),
       // Quản trị hệ thống khoá tài khoản này → đăng xuất ngay (trang đăng nhập sẽ hiện lý do khi đăng nhập lại)
       'account:banned': () => logout(),
@@ -257,6 +264,7 @@ function useSocialState() {
   return {
     toast,
     showToast,
+    dismissToast: () => setToast(null),
 
     // ===== Bài viết =====
     posts,
@@ -449,7 +457,10 @@ function useSocialState() {
         await api.post(`/friends/requests/${requestId}/accept`);
         const request = friendRequests.find((r) => r.id === requestId);
         setFriendRequests((list) => list.filter((r) => r.id !== requestId));
-        if (request) setFriends((list) => [request.sender, ...list]);
+        if (request) {
+          setFriends((list) => [request.sender, ...list]);
+          setFollowing((list) => [request.sender, ...list.filter((f) => f.id !== request.sender.id)]); // kết bạn = tự động theo dõi nhau
+        }
         showToast('Đã chấp nhận lời mời kết bạn!');
       }, 'Không thể chấp nhận lời mời.'),
 
@@ -661,6 +672,14 @@ function useSocialState() {
         setConversations((list) => list.map((c) => (c.id === conversationId ? d.conversation : c)));
         upsertMessage(conversationId, d.systemMessage);
       }, 'Không thể cập nhật biệt danh.'),
+
+    /** Đổi màu chủ đề của cuộc trò chuyện (mọi thành viên cùng thấy). */
+    setChatTheme: (conversationId: string, color: string) =>
+      attempt(async () => {
+        const d = await api.patch<{ conversation: Conversation; systemMessage: Message }>(`/messages/conversations/${conversationId}/theme`, { color });
+        setConversations((list) => list.map((c) => (c.id === conversationId ? { ...c, themeColor: d.conversation.themeColor } : c)));
+        upsertMessage(conversationId, d.systemMessage);
+      }, 'Không thể đổi màu chủ đề.'),
 
     /** Thu hồi: server trả về bản tin nhắn đã thu hồi (không xoá hẳn). */
     recallMessage: (conversationId: string, messageId: string) =>

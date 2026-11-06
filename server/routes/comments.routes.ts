@@ -5,7 +5,7 @@ import { PostModel } from '../models/Post';
 import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
 import { validate, createCommentSchema, updateCommentSchema, reactPostSchema } from '../validation';
-import { commentToJson } from '../formatResponse';
+import { commentToJson, getId } from '../formatResponse';
 import { emitToUser } from '../socketServer';
 import { emitToAllowedViewers } from '../privacyRules';
 import { canViewPost, canInteractPost, emitToGroupMembers, getMembership, getMemberIds, isGroupAdmin } from '../groupRules';
@@ -99,7 +99,14 @@ commentsRouter.patch('/:id', validate(updateCommentSchema), async (req, res) => 
   comment.editedAt = new Date();
   await comment.save();
   await comment.populate(['author', 'taggedUsers']);
-  res.json({ comment: commentToJson(comment) });
+  const json = commentToJson(comment);
+  res.json({ comment: json });
+
+  // Báo realtime cho những người nhận bình luận gốc (chủ bài + người được gắn thẻ) để họ thấy nội dung mới ngay
+  const post = await PostModel.findById(comment.post).select('author');
+  const receivers = new Set<string>([...(post ? [post.author.toString()] : []), ...comment.taggedUsers.map(getId)]);
+  receivers.delete(req.userId);
+  receivers.forEach((id) => emitToUser(id, 'comment:update', { postId: comment.post.toString(), comment: json }));
 });
 
 /** Áp dụng cảm xúc lên bình luận: cùng loại với cảm xúc hiện tại thì bỏ, khác loại thì đổi, chưa có thì thêm. */

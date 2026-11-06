@@ -110,6 +110,8 @@ export const createConversationSchema = z.object({
   participantIds: z.array(id).max(100).optional(),
   name: text(150).optional(),
 });
+export const CHAT_THEME_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#475569'] as const;
+export const setThemeSchema = z.object({ color: z.enum(CHAT_THEME_COLORS) });
 export const setNicknameSchema = z.object({ userId: id, nickname: text(60).optional().default('') });
 export const sendMessageSchema = z.object({
   content: text(5000).default(''),

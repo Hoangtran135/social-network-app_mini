@@ -6,12 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { Message, MessageAttachment } from '../../types';
+import { NicknameDialog } from './NicknameDialog';
 import { UploadResult } from '../../utils/api';
 import { fileSize, timeAgo } from '../../utils/format';
 
 // Một cửa sổ chat nổi ở góc dưới màn hình (có thể thu nhỏ):
 // danh sách tin nhắn, gửi chữ / emoji / ảnh / tệp, thả cảm xúc, thu hồi tin của mình,
-// menu "..." để xem trang cá nhân, đổi màu chủ đề (chỉ lưu trên trình duyệt này), đặt biệt danh.
+// menu "..." để xem trang cá nhân, đổi màu chủ đề và đặt biệt danh (cả hai đều lưu trên server và hiện giống nhau ở mọi thành viên).
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '🔥', '🎉', '🚀', '😍', '👏'];
@@ -24,13 +25,11 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
   onClose,
   onToggleMinimize,
 }) => {
-  const { conversations, messages, sendMessage, loadMessages, setNickname, typingIn, sendTyping } = useSocial();
+  const { conversations, messages, sendMessage, loadMessages, setNickname, setChatTheme, typingIn, sendTyping } = useSocial();
   const { currentUser } = useAuth();
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [panel, setPanel] = useState<'emoji' | 'attach' | 'options' | 'nickname' | null>(null);
-  const [nickname, setNicknameText] = useState('');
-  const [color, setColor] = useState(() => localStorage.getItem(`chatTheme:${conversationId}`) || THEME_COLORS[0]);
   const optionsRef = useClickOutside(() => panel === 'options' && setPanel(null));
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +64,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
 
   const list = messages[conversationId];
   const conversation = conversations.find((c) => c.id === conversationId);
+  const color = conversation?.themeColor || THEME_COLORS[0]; // màu chung của cuộc trò chuyện (cả hai bên cùng thấy)
 
   // Mở cửa sổ → tải tin nhắn (server đánh dấu đã đọc)
   useEffect(() => {
@@ -100,10 +100,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
     stopTyping();
   };
 
-  const pickColor = (c: string) => {
-    setColor(c);
-    localStorage.setItem(`chatTheme:${conversationId}`, c);
-  };
+  const pickColor = (c: string) => void setChatTheme(conversationId, c);
 
   if (minimized) {
     return (
@@ -146,21 +143,18 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
             {panel === 'options' && (
               <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 text-slate-700 text-xs font-semibold space-y-1">
                 {partner && (
-                  <>
-                    <Link to={`/profile/${partner.id}`} className="block px-2 py-1.5 rounded hover:bg-slate-50">
-                      Xem trang cá nhân
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setNicknameText(conversation.nicknames?.[partner.id] || '');
-                        setPanel('nickname');
-                      }}
-                      className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-50"
-                    >
-                      Đặt biệt danh
-                    </button>
-                  </>
+                  <Link to={`/profile/${partner.id}`} className="block px-2 py-1.5 rounded hover:bg-slate-50">
+                    Xem trang cá nhân
+                  </Link>
                 )}
+                <button
+                  onClick={() => {
+                    setPanel('nickname');
+                  }}
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-50"
+                >
+                  Biệt danh
+                </button>
                 <p className="px-2 pt-1 text-slate-400">Màu chủ đề</p>
                 <div className="grid grid-cols-8 gap-1 px-2">
                   {THEME_COLORS.map((c) => (
@@ -179,21 +173,7 @@ export const ChatWindow: React.FC<{ conversationId: string; minimized: boolean; 
         </div>
       </div>
 
-      {panel === 'nickname' && partner && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setNickname(conversationId, partner.id, nickname);
-            setPanel(null);
-          }}
-          className="px-3 py-2 border-b border-slate-100 flex gap-2"
-        >
-          <input autoFocus value={nickname} onChange={(e) => setNicknameText(e.target.value)} placeholder={`Biệt danh cho ${partner.name} (để trống = xoá)`} className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200" />
-          <button type="submit" className="btn-primary btn-sm">
-            Lưu
-          </button>
-        </form>
-      )}
+      {panel === 'nickname' && <NicknameDialog conversation={conversation} meId={currentUser.id} onSave={(userId, nickname) => setNickname(conversationId, userId, nickname)} onClose={() => setPanel(null)} />}
 
       {/* ----- Danh sách tin nhắn ----- */}
       <div className="flex-1 p-3 overflow-y-auto overscroll-contain space-y-3 bg-slate-50">

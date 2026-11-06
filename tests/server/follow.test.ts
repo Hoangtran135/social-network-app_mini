@@ -157,3 +157,35 @@ describe('follow-stats', () => {
     expect(await stats(a, a.id)).toEqual({ followersCount: 0, followingCount: 0, isFollowing: false });
   });
 });
+
+describe('Kết bạn tự động theo dõi', () => {
+  it('chấp nhận lời mời → hai người theo dõi nhau (đếm người theo dõi / đang theo dõi đúng)', async () => {
+    const a = await signUp(app);
+    const b = await signUp(app);
+    await befriend(app, a, b);
+    expect(await stats(a, b.id)).toEqual({ followersCount: 1, followingCount: 1, isFollowing: true });
+    expect(await stats(b, a.id)).toEqual({ followersCount: 1, followingCount: 1, isFollowing: true });
+    const following = (await as(app, a).get('/api/users/me/following')).body.users as { id: string }[];
+    expect(following.map((u) => u.id)).toEqual([b.id]);
+  });
+
+  it('đã theo dõi từ trước → kết bạn không tạo theo dõi trùng', async () => {
+    const a = await signUp(app);
+    const b = await signUp(app);
+    await as(app, a).post(`/api/users/${b.id}/follow`);
+    await befriend(app, a, b);
+    expect(await stats(a, b.id)).toMatchObject({ followersCount: 1, isFollowing: true });
+    expect(await stats(b, a.id)).toMatchObject({ followersCount: 1, isFollowing: true });
+  });
+
+  it('huỷ kết bạn → vẫn còn theo dõi (bỏ theo dõi là việc riêng); bỏ theo dõi xong vẫn là bạn bè', async () => {
+    const a = await signUp(app);
+    const b = await signUp(app);
+    await befriend(app, a, b);
+    await as(app, a).delete(`/api/users/${b.id}/follow`);
+    expect((await stats(a, b.id)).isFollowing).toBe(false);
+    expect(((await as(app, a).get('/api/friends')).body.friends as unknown[]).length).toBe(1);
+    await as(app, a).delete(`/api/friends/${b.id}`);
+    expect((await stats(b, a.id)).isFollowing).toBe(true);
+  });
+});

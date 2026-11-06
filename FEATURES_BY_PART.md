@@ -19,6 +19,8 @@ Bổ sung cho [FEATURES.md](FEATURES.md) (liệt kê theo nhóm chức năng). F
 | `/reset-password` | Đặt lại mật khẩu | Đặt mật khẩu mới từ liên kết trong email |
 | `/verify-email` | Xác minh email | Xác nhận email từ liên kết; thông báo thành công / liên kết hết hạn |
 
+> Nút **Báo cáo vi phạm** (`SystemReport.tsx`) có ở: menu bài viết, bình luận, reel, hồ sơ người dùng, trang nhóm, trang fanpage — gọi `POST /api/reports`.
+
 ### Nhóm đã đăng nhập (🔒, dùng chung bố cục `MainLayout`)
 | Đường dẫn | Màn hình | Chức năng |
 |---|---|---|
@@ -52,6 +54,7 @@ Bổ sung cho [FEATURES.md](FEATURES.md) (liệt kê theo nhóm chức năng). F
 | `MobileNav` | Thanh dưới trên điện thoại: Trang chủ, Bạn bè, Đăng bài, Thông báo, Cá nhân |
 | `MainLayout` | Ghép các phần trên + `VerifyEmailBanner`, `ErrorBoundary`, hộp thoại đăng bài, cửa sổ chat nổi, toast |
 | `AuthLayout` | Khung các trang đăng nhập / đăng ký (logo, nút đổi sáng–tối) |
+| `AdminLayout` | Khung khu quản trị: thanh trên (về mạng xã hội, đổi sáng–tối), menu 8 mục (tab cuộn ngang trên điện thoại) kèm huy hiệu báo cáo chờ xử lý realtime |
 
 ## 1.3 Thành phần dùng lại (`src/components/`)
 | Nhóm | Thành phần | Chức năng |
@@ -71,6 +74,8 @@ Bổ sung cho [FEATURES.md](FEATURES.md) (liệt kê theo nhóm chức năng). F
 | Nhóm | `components/group/*` | `CreateGroupModal`, `JoinGroupModal` (trả lời câu hỏi), `GroupMembersTab` (menu bổ nhiệm / gỡ quyền / chuyển quyền / xoá), `GroupAdminTab` (yêu cầu tham gia, bài chờ duyệt, báo cáo, cài đặt), `groupUi` (ảnh nhóm, nhãn riêng tư, nhãn vai trò) |
 | Trang | `components/page/*` | `CreatePageModal`, `PageAdminTab` (thông tin, quản trị viên, người theo dõi, xoá trang), `pageUi` (danh mục) |
 | Reels | `components/reel/CreateReelModal` | Chọn video + chú thích + quyền riêng tư để đăng reel |
+| Quản trị | `components/admin/*` · `pages/admin/*` | `AdminUi` (thanh tìm + lọc, bảng có phân trang, ô người dùng, nhãn trạng thái), `ReasonDialog` (nhập lý do / ghi chú); 8 trang quản trị. Dữ liệu qua `useAdminList` (lọc / tìm / phân trang ở server, chỉ nhận kết quả của lần gọi mới nhất), `useDebouncedValue`, `usePendingReports` |
+| Báo cáo | `SystemReport` · `NotificationParts` | Hộp thoại + nút báo cáo vi phạm; hiển thị thông báo hệ thống ("Hệ thống: …" + biểu tượng khiên) |
 | Tìm kiếm | `components/search/SearchResultItems` | Các dòng kết quả (người, nhóm, trang, bài) kèm chip lý do — dùng chung cho ô tìm kiếm và trang `/search` |
 | Chung | `ui.tsx` | `PageHeader`, `EmptyState`, `ErrorState`, `PageLoading`, `Skeleton`/`PostSkeleton`/`ListSkeleton`, `TabButton`, `FormField` (có nút hiện/ẩn mật khẩu), `Avatar` (chấm online), `AvatarFrame`, `CountBadge`, `UserLinks` |
 | | `Toast` | Thông báo nổi, có nút hành động (vd "Hoàn tác") |
@@ -274,5 +279,5 @@ Bổ sung cho [FEATURES.md](FEATURES.md) (liệt kê theo nhóm chức năng). F
 |---|---|
 | Triển khai (`deploy/`) | Cài VPS Windows, HTTPS, cấu hình Nginx, deploy bằng PM2, runner GitHub self-hosted (`.github/workflows/deploy.yml` chạy khi push `main`) |
 | CI (`.github/workflows/test.yml`) | Typecheck + lint + test kèm độ phủ cho mỗi lần push / pull request |
-| Test (`tests/`) | Hơn 3600 test Vitest: API + realtime (supertest, socket.io-client, MongoDB tạm) và giao diện (Testing Library + backend giả); ngưỡng độ phủ tối thiểu |
-| Dữ liệu demo (`db/`) | `seed-demo.ts`, `export-json.ts`, `import-json.ts`; Postman collection |
+| Test (`tests/`) | Hơn 4000 test Vitest: API + realtime (supertest, socket.io-client, MongoDB tạm) và giao diện (Testing Library + backend giả); ngưỡng độ phủ tối thiểu |
+| Dữ liệu (`db/`) | `seed-demo.ts`, `seed-bulk.ts` (500 tài khoản + 10.000 bài, ~60% có ảnh khớp chú thích theo 15 chủ đề, bình luận bám nội dung; `seed-content.ts` / `seed-topics.ts` / `seed-random.ts` là kho nội dung), `make-admin.ts` (cấp / thu hồi quyền quản trị), `export-json.ts`, `import-json.ts`; Postman collection |

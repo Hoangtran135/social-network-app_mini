@@ -199,3 +199,25 @@ describe('Khung xương và lỗi khi tải bảng tin', () => {
     expect(await feedLoaded()).toBeTruthy();
   });
 });
+
+describe('Kết bạn tự động theo dõi', () => {
+  it('chấp nhận lời mời → bài của người gửi hiện ở tab "Đang theo dõi" ngay', async () => {
+    const { user } = renderApp('/', { seed: () => void db.posts.push({ id: 'ps2', author: db.users.find((u) => u.id === 's2')!, content: 'Bài của người mời', privacy: 'public', createdAt: new Date().toISOString(), reactions: [], commentsCount: 0, sharesCount: 0, isSaved: false, pinned: false }) });
+    await feedLoaded();
+    await user.click(screen.getByRole('button', { name: 'Đang theo dõi' }));
+    expect(screen.queryByText('Bài của người mời')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Xác nhận' }));
+    expect(await screen.findByText('Bài của người mời')).toBeTruthy();
+  });
+
+  it('người kia chấp nhận lời mời của mình (thông báo friend_accept realtime) → mình cũng đang theo dõi họ', async () => {
+    const { serverEmit } = await import('./fakeServer');
+    const { act } = await import('./harness');
+    const { makeUser } = await import('./fakeServer');
+    const { user } = renderApp('/profile/s3');
+    await screen.findByRole('button', { name: 'Theo dõi' });
+    act(() => serverEmit('notification:new', { id: 'na', userId: 'u1', actor: makeUser('s3', 'Người Được Mời'), type: 'friend_accept', content: 'đã chấp nhận lời mời', isRead: false, createdAt: new Date().toISOString() }));
+    expect((await screen.findByRole('button', { name: /Đang theo dõi/ })).getAttribute('aria-pressed')).toBe('true');
+    expect(user).toBeTruthy();
+  });
+});

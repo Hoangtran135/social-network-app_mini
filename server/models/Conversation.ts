@@ -11,6 +11,8 @@ const conversationSchema = new Schema(
     participants: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
     // Biệt danh: { idNgườiDùng: "biệt danh" }
     nicknames: { type: Map, of: String, default: {} },
+    // Màu chủ đề của cuộc trò chuyện (dùng chung cho mọi thành viên); chưa đặt = màu mặc định của giao diện
+    themeColor: String,
   },
   // updatedAt = lần cuối có tin nhắn, dùng để xếp hội thoại mới nhất lên đầu
   { timestamps: { createdAt: false, updatedAt: true } }

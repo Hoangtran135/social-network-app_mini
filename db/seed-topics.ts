@@ -1,5 +1,8 @@
 // Dữ liệu theo CHỦ ĐỀ cho các script dữ liệu mẫu: mỗi chủ đề có câu đăng bài, từ khoá ảnh (khớp nội dung) và bình luận bám sát nội dung.
-// Ảnh lấy từ loremflickr.com theo từ khoá tiếng Anh nên ảnh luôn cùng chủ đề với chú thích; tham số ?lock=N giữ ảnh cố định giữa các lần xem.
+// Ảnh lấy từ danh sách ảnh thật theo từ khoá tiếng Anh (Wikimedia Commons) nên ảnh cùng chủ đề với chú thích.
+
+import fs from 'fs';
+import path from 'path';
 
 export interface Topic {
   /** Từ khoá ảnh ứng với TỪNG câu trong `lines` (cùng thứ tự): ảnh của bài bám sát đúng câu chú thích. */
@@ -232,5 +235,11 @@ export const GENERAL_COMMENTS = ['Đồng ý hoàn toàn với bạn 😄', 'C�
 /** Bình luận cho bài đăng lên tường người khác (chúc mừng, hỏi thăm). */
 export const WALL_COMMENTS = ['Cảm ơn bạn nhiều nhé ❤️', 'Lâu quá không gặp, hẹn cuối tuần nhé!', 'Cảm ơn lời chúc của bạn!', 'Mình cũng nhớ bạn lắm.'];
 
-/** URL ảnh theo từ khoá (loremflickr). `n` làm khoá cố định để mỗi ảnh khác nhau. */
-export const imageUrl = (tag: string, n: number) => `https://loremflickr.com/800/600/${encodeURIComponent(tag)}?lock=${n}`;
+/** Ảnh thật theo từ khoá (db/seed-images.json, tạo bằng db/fetch-topic-images.ts từ Wikimedia Commons). */
+const IMAGES: Record<string, string[]> = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'db', 'seed-images.json'), 'utf8'));
+
+/** URL ảnh đúng từ khoá; `n` chọn ảnh nào trong số ảnh của từ khoá đó (từ khoá chưa có ảnh thì lấy ảnh của từ khoá bất kỳ để không bao giờ vỡ). */
+export const imageUrl = (tag: string, n: number) => {
+  const list = IMAGES[tag]?.length ? IMAGES[tag] : Object.values(IMAGES).find((l) => l.length) ?? [];
+  return list[n % list.length];
+};

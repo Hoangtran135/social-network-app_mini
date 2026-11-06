@@ -156,6 +156,7 @@ export function conversationToJson(c: Doc, lastMessage?: Doc, unreadCount = 0) {
     avatar: c.avatar,
     participants: (c.participants || []).map(userToJson),
     nicknames: c.nicknames ? Object.fromEntries(c.nicknames) : {},
+    themeColor: c.themeColor,
     lastMessage: lastMessage ? messageToJson(lastMessage, participantIds) : undefined,
     unreadCount,
     updatedAt: c.updatedAt,

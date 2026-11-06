@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { FriendRequestModel } from '../models/FriendRequest';
 import { FriendshipModel } from '../models/Friendship';
+import { FollowModel } from '../models/Follow';
 import { UserModel } from '../models/User';
 import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
@@ -9,7 +10,7 @@ import { friendRequestToJson, userToJson, Doc } from '../formatResponse';
 import { emitToUser } from '../socketServer';
 import { isBlockedBetween, getBlockedIds, getFriendIds } from '../privacyRules';
 
-// API bạn bè (/api/friends): danh sách bạn, gợi ý kết bạn, gửi / chấp nhận / từ chối / huỷ lời mời, huỷ kết bạn.
+// API bạn bè (/api/friends): danh sách bạn, gợi ý kết bạn, gửi / chấp nhận (chấp nhận = tự động theo dõi nhau) / từ chối / huỷ lời mời, huỷ kết bạn.
 
 export const friendsRouter = Router();
 friendsRouter.use(requireAuth);
@@ -90,6 +91,8 @@ friendsRouter.post('/requests/:id/accept', async (req, res) => {
   if (!(await FriendRequestModel.findOneAndDelete({ _id: request._id }))) return res.status(404).json({ error: 'Không tìm thấy lời mời.' });
   const senderId = request.sender.toString();
   await FriendshipModel.create({ userA: req.userId, userB: senderId });
+  // Kết bạn thì tự động theo dõi nhau (hai chiều, không tạo trùng nếu đã theo dõi từ trước)
+  await Promise.all([[req.userId, senderId], [senderId, req.userId]].map(([follower, following]) => FollowModel.updateOne({ follower, following }, { $setOnInsert: { follower, following } }, { upsert: true })));
   await createNotification({ user: senderId, actor: req.userId, type: 'friend_accept', content: 'đã chấp nhận lời mời kết bạn của bạn.', targetId: req.userId, targetType: 'profile' });
   res.json({ ok: true });
 });

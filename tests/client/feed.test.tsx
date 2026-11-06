@@ -664,3 +664,26 @@ describe('Realtime của bảng tin', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Xem tin của Bạn Hai' })).toBeNull());
   });
 });
+
+describe('Sửa bình luận realtime và toast thông báo bấm được', () => {
+  it('comment:update → nội dung bình luận đổi ngay khi khung bình luận đang mở; bài khác / chưa mở thì bỏ qua', async () => {
+    const { user } = renderApp('/');
+    await feedLoaded();
+    await user.click(within(post('p2')).getByRole('button', { name: 'Bình luận' }));
+    await within(post('p2')).findByText('Bình luận đầu tiên');
+    act(() => serverEmit('comment:update', { postId: 'p2', comment: { ...db.comments[0], content: 'Bình luận đã sửa' } }));
+    expect(await within(post('p2')).findByText('Bình luận đã sửa')).toBeTruthy();
+    expect(within(post('p2')).queryByText('Bình luận đầu tiên')).toBeNull();
+    act(() => serverEmit('comment:update', { postId: 'p3', comment: { ...db.comments[0], content: 'Không liên quan' } }));
+    expect(screen.queryByText('Không liên quan')).toBeNull();
+  });
+
+  it('bấm vào toast của thông báo bình luận → mở bài viết đó và toast biến mất', async () => {
+    const { user, location } = renderApp('/notifications');
+    await screen.findByText('Bạn có 2 thông báo chưa đọc');
+    act(() => serverEmit('notification:new', { id: 'nt', userId: 'u1', actor: makeUser('f2', 'Bạn Hai'), type: 'comment', content: 'đã bình luận về bài viết của bạn: "hello..."', targetId: 'p2', targetType: 'post', isRead: false, createdAt: new Date().toISOString() }));
+    await user.click(await screen.findByRole('button', { name: /Bạn Hai đã bình luận về bài viết của bạn/ }));
+    await waitFor(() => expect(location()).toBe('/'));
+    expect(screen.queryByRole('button', { name: /Bạn Hai đã bình luận về bài viết của bạn/ })).toBeNull();
+  });
+});

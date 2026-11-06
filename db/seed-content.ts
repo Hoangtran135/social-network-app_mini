@@ -30,9 +30,18 @@ const FEELINGS = ['hạnh phúc 😊', 'hào hứng 🌟', 'thư giãn ☕', 'tu
 export const REACTION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;
 
 // ---------- Media ----------
-const GCS = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample';
-/** Video mẫu công khai: dùng nhiều video khác nhau để các reel / bài video không giống hệt nhau. */
-export const VIDEOS = [`${GCS}/ForBiggerBlazes.mp4`, `${GCS}/ForBiggerEscapes.mp4`, `${GCS}/ForBiggerFun.mp4`, `${GCS}/ForBiggerJoyrides.mp4`, `${GCS}/ForBiggerMeltdowns.mp4`, `${GCS}/SubaruOutbackOnStreetAndDirt.mp4`, `${GCS}/WeAreGoingOnBullrun.mp4`, `${GCS}/WhatCarCanYouGetForAGrand.mp4`, 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'];
+/** Video mẫu công khai còn truy cập được (đã kiểm tra): nhiều video khác nhau để các reel / bài video không giống hệt nhau. */
+const TEST_VIDEOS = 'https://test-videos.co.uk/vids';
+export const VIDEOS = [
+  'https://download.samplelib.com/mp4/sample-5s.mp4',
+  'https://download.samplelib.com/mp4/sample-10s.mp4',
+  'https://download.samplelib.com/mp4/sample-15s.mp4',
+  `${TEST_VIDEOS}/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4`,
+  `${TEST_VIDEOS}/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4`,
+  `${TEST_VIDEOS}/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4`,
+  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4',
+];
 
 // ---------- Story ----------
 export const STORY_GRADIENTS = ['from-indigo-500 via-purple-500 to-pink-500', 'from-amber-500 via-rose-500 to-purple-600', 'from-emerald-400 via-teal-500 to-cyan-600', 'from-blue-600 via-indigo-600 to-violet-800', 'from-rose-500 via-red-500 to-orange-500', 'from-slate-900 via-purple-900 to-slate-900'];

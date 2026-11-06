@@ -12,6 +12,7 @@ Công nghệ: React 19 + TypeScript + Tailwind 4 (giao diện), Express + MongoD
 - **Quên mật khẩu / đặt lại mật khẩu** qua email (liên kết 1 giờ, dùng một lần, mã lưu dạng băm).
 - **Đổi mật khẩu** (phải nhập đúng mật khẩu hiện tại).
 - Giới hạn số lần thử ở các API nhạy cảm (đăng nhập, đăng ký, quên/đặt lại mật khẩu, xác minh email).
+- **Tài khoản bị khoá** (bởi quản trị viên): không đăng nhập được (trang đăng nhập hiện lý do), token cũ bị từ chối ở mọi API và Socket.IO; đang online thì bị đăng xuất ngay.
 
 ## 2. Hồ sơ cá nhân
 - Xem hồ sơ của mình và của người khác, 4 tab: **Bài viết**, **Bạn bè**, **Hình ảnh**, **Giới thiệu**; thẻ giới thiệu nhanh (nơi làm việc, học vấn, nơi sống, ngày tham gia, website).
@@ -39,6 +40,7 @@ Công nghệ: React 19 + TypeScript + Tailwind 4 (giao diện), Express + MongoD
 - **Xoá bài**, **ghim bài** lên đầu trang cá nhân, **lưu bài** (trang *Đã lưu*), **sao chép liên kết**.
 - **Chia sẻ**: lên trang cá nhân **kèm lời bình**, hoặc gửi qua tin nhắn cho bạn; bài riêng tư không bị "mở rộng" thành công khai khi chia sẻ.
 - **Tắt / bật bình luận** cho từng bài (chủ bài); bình luận cũ vẫn xem được.
+- **Báo cáo vi phạm** tới quản trị hệ thống: menu "…" của bài người khác, nút "Báo cáo" dưới bình luận, nút cờ ở reel, hồ sơ người dùng, trang nhóm và trang fanpage (chọn lý do + mô tả, xem mục 10e). Bài trong nhóm còn có "Báo cáo bài viết" riêng gửi quản trị viên nhóm.
 - **Ẩn bài / không quan tâm** (chỉ ẩn ở bảng tin của mình) kèm nút **Hoàn tác** đưa bài về đúng vị trí.
 - **Kỷ niệm**: bài của mình đăng đúng ngày–tháng này ở các năm trước.
 
@@ -68,6 +70,7 @@ Công nghệ: React 19 + TypeScript + Tailwind 4 (giao diện), Express + MongoD
 
 ## 9. Thông báo
 - Realtime + toast: thích bài, bình luận, lời mời / chấp nhận kết bạn, được gắn thẻ, đăng lên tường, theo dõi, cảm xúc story, xoá bình luận…
+- **Thông báo hệ thống** (từ quản trị viên: thông báo toàn hệ thống, nội dung bị gỡ, kết quả báo cáo của bạn) hiện là "Hệ thống: …" với biểu tượng khiên, không lộ tên quản trị viên.
 - Menu chuông (5 mới nhất) và trang **Thông báo**: lọc (Tất cả / Chưa đọc / Tương tác bài viết / Bạn bè), **đánh dấu tất cả đã đọc**, tải thêm; bấm thông báo để mở đúng bài viết (cuộn tới và viền sáng) hoặc trang cá nhân.
 
 ## 10. Tìm kiếm tổng hợp
@@ -127,5 +130,5 @@ Trình duyệt → server: `typing`, `message:delivered`.
 ## 14. Vận hành & chất lượng
 - **Triển khai** lên VPS Windows (PM2 + Nginx, workflow GitHub Actions dùng self-hosted runner) — xem `deploy/`.
 - **CI** (`.github/workflows/test.yml`): typecheck + lint + test kèm độ phủ cho mỗi pull request.
-- **Bộ test** (Vitest): hơn 3900 test — API + realtime (supertest, socket.io-client, MongoDB tạm), giao diện (Testing Library + backend giả trong bộ nhớ), ma trận quyền riêng tư / biên dữ liệu; độ phủ ~99,9% dòng lệnh và ≥ 98% nhánh, có ngưỡng tối thiểu khiến CI báo đỏ nếu tụt. Hướng dẫn trong `README.md`.
+- **Bộ test** (Vitest): hơn 4000 test — API + realtime (supertest, socket.io-client, MongoDB tạm), giao diện (Testing Library + backend giả trong bộ nhớ), ma trận quyền riêng tư / biên dữ liệu; độ phủ ~99,9% dòng lệnh và ≥ 98% nhánh, có ngưỡng tối thiểu khiến CI báo đỏ nếu tụt. Hướng dẫn trong `README.md`.
 - Script dữ liệu: `db/seed-demo.ts` (demo), `db/seed-bulk.ts` (thêm 500 tài khoản + 10.000 bài để thử tải; ~60% bài có ảnh khớp chú thích theo 15 chủ đề, bình luận bám nội dung bài; `--reset` để xoá), `db/make-admin.ts` (cấp / thu hồi quyền quản trị), `db/export-json.ts`, `db/import-json.ts`; Postman collection kèm theo.
