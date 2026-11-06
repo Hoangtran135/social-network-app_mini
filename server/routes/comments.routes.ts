@@ -56,10 +56,10 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   const authorId = post.author.toString();
   const target = { targetId: postId, targetType: 'post' as const };
   if (authorId !== me) {
-    await createNotification({ user: authorId, actor: me, type: 'comment', content: `đã bình luận về bài viết của bạn: "${content.slice(0, 30)}..."`, ...target });
+    await createNotification({ user: authorId, actor: me, type: 'comment', content: `đã bình luận về bài viết của bạn: "${content.slice(0, 30)}..."`, commentId: comment.id, ...target });
   }
   const taggedOthers = tagged.filter((id) => id !== authorId);
-  await Promise.all(taggedOthers.map((id) => createNotification({ user: id, actor: me, type: 'system', content: 'đã gắn thẻ bạn trong một bình luận.', ...target })));
+  await Promise.all(taggedOthers.map((id) => createNotification({ user: id, actor: me, type: 'system', content: 'đã gắn thẻ bạn trong một bình luận.', commentId: comment.id, ...target })));
 
   const json = commentToJson(comment);
   const receivers = new Set([...(authorId !== me ? [authorId] : []), ...tagged]);

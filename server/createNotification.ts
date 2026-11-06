@@ -10,6 +10,8 @@ export async function createNotification(data: {
   type: 'like' | 'comment' | 'friend_request' | 'friend_accept' | 'system';
   content: string;
   targetId?: string; // bấm vào thông báo thì mở bài viết / trang cá nhân này
+  commentId?: string; // bình luận cần cuộn tới khi bấm thông báo
+  focus?: 'admin'; // mục cần mở ở nơi đích (vd tab Quản trị của nhóm)
   targetType?: 'post' | 'profile' | 'group' | 'page' | 'system'; // 'system' = thông báo từ quản trị hệ thống (giao diện hiện "Hệ thống" thay vì tên người)
 }) {
   const notification = await NotificationModel.create(data);

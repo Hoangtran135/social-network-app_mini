@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Lock, Users, FileText, Info, ShieldCheck, Clock, Flag } from 'lucide-react';
 import { ReportButton } from '../components/SystemReport';
 import { api, ApiError } from '../utils/api';
@@ -121,7 +121,9 @@ export const GroupPage: React.FC = () => {
   const [group, setGroup] = useState<Group | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorText, setErrorText] = useState('');
-  const [tab, setTab] = useState<Tab>('posts');
+  // ?tab=admin (từ thông báo xin vào nhóm / bài chờ duyệt / báo cáo) mở thẳng tab Quản trị
+  const initialTab: Tab = useSearchParams()[0].get('tab') === 'admin' ? 'admin' : 'posts';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [joining, setJoining] = useState(false); // hộp thoại trả lời câu hỏi
 
   const load = useCallback(async () => {
@@ -135,9 +137,9 @@ export const GroupPage: React.FC = () => {
   }, [id]);
   useEffect(() => {
     setStatus('loading');
-    setTab('posts');
+    setTab(initialTab);
     load();
-  }, [load]);
+  }, [load, initialTab]);
 
   const { act, busy } = useManageAction(load);
 

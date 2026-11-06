@@ -140,6 +140,8 @@ export interface NotificationItem {
   type: 'like' | 'comment' | 'friend_request' | 'friend_accept' | 'system';
   content: string;
   targetId?: string;
+  commentId?: string; // thông báo về bình luận: bình luận cần cuộn tới
+  focus?: 'admin'; // mở sẵn mục này ở nơi đích (tab Quản trị của nhóm)
   targetType?: 'post' | 'profile' | 'group' | 'page' | 'system';
   isRead: boolean;
   createdAt: string;

@@ -56,14 +56,15 @@ const MenuItem: React.FC<{ icon: LucideIcon; label: string; onClick: () => void;
 
 /** groupRole: vai trò của người xem trong nhóm của bài (chỉ truyền ở trang nhóm) — quản trị viên được xoá bài người khác, thành viên được báo cáo. */
 /** pageAdmin: người xem là quản trị viên của Trang đã đăng bài này (chỉ truyền ở trang của Trang) — được xoá bài của trang. */
-export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; pageAdmin?: boolean }> = ({ post, groupRole = null, pageAdmin = false }) => {
+/** focusCommentId: mở sẵn khung bình luận và cuộn tới bình luận này (từ thông báo). */
+export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; pageAdmin?: boolean; focusCommentId?: string }> = ({ post, groupRole = null, pageAdmin = false, focusCommentId }) => {
   const { currentUser } = useAuth();
   const { toggleReaction, toggleSavePost, togglePinPost, sharePost, sharePostToChat, getOrCreateConversation, deletePost, hidePost, toggleComments, showToast, friends, deleteGroupPost, reportGroupPost, deletePagePost } = useSocial();
   const { openChat } = useChatWindows();
   const confirm = useConfirm();
 
   const [menu, setMenu] = useState<'options' | 'reactions' | 'share' | null>(null);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(!!focusCommentId);
   const [isEditing, setIsEditing] = useState(false);
   const [showSendToFriend, setShowSendToFriend] = useState(false);
   const [shareDialog, setShareDialog] = useState(false); // hộp thoại chia sẻ kèm lời bình
@@ -313,7 +314,7 @@ export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; page
         )}
       </div>
 
-      {showComments && <CommentSection postId={post.id} disabled={!!post.commentsDisabled} />}
+      {showComments && <CommentSection postId={post.id} disabled={!!post.commentsDisabled} focusCommentId={focusCommentId} />}
 
       {/* ----- Các hộp thoại ----- */}
       {isEditing && <PostFormModal post={post} onClose={() => setIsEditing(false)} />}

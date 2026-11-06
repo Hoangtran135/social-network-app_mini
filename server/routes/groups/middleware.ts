@@ -23,13 +23,13 @@ export const requireAdmin: RequestHandler = (_req, res, next) => (isGroupAdmin(r
 export const requireOwner: RequestHandler = (_req, res, next) => (res.locals.membership?.role === 'owner' ? next() : void res.status(403).json({ error: 'Chỉ chủ nhóm mới có quyền này.' }));
 
 /** Thông báo trong nhóm: bấm vào thì mở trang nhóm. */
-export const notifyGroup = (userId: string, actor: string, group: Doc, content: string) =>
-  createNotification({ user: userId, actor, type: 'system', content, targetId: group.id, targetType: 'group' });
+export const notifyGroup = (userId: string, actor: string, group: Doc, content: string, focus?: 'admin') =>
+  createNotification({ user: userId, actor, type: 'system', content, targetId: group.id, targetType: 'group', focus });
 
-/** Báo cho chủ nhóm + quản trị viên (trừ người gây ra sự việc). */
+/** Báo cho chủ nhóm + quản trị viên (trừ người gây ra sự việc); bấm vào thì mở thẳng tab Quản trị (yêu cầu tham gia, bài chờ duyệt, báo cáo). */
 export async function notifyAdmins(group: Doc, actor: string, content: string) {
   const adminIds = (await getMemberIds(group.id, true)).filter((id) => id !== actor);
-  await Promise.all(adminIds.map((id) => notifyGroup(id, actor, group, content)));
+  await Promise.all(adminIds.map((id) => notifyGroup(id, actor, group, content, 'admin')));
 }
 
 /** Xoá một bài trong nhóm cùng bình luận và báo cáo của nó. */

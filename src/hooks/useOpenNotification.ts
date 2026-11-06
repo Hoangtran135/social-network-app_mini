@@ -3,7 +3,7 @@ import { useSocial } from '../context/SocialContext';
 import { NotificationItem } from '../types';
 
 // Xử lý khi bấm vào một thông báo (dùng ở menu thông báo trên Navbar và trang Thông báo):
-// đánh dấu đã đọc, rồi mở bài viết liên quan (cuộn tới và viền xanh), trang cá nhân, nhóm hoặc trang (fanpage).
+// đánh dấu đã đọc, rồi mở ĐÚNG nơi liên quan: bài viết (cuộn tới và viền xanh), bình luận (mở khung bình luận, cuộn tới và viền xanh), trang cá nhân, nhóm (tab Quản trị với yêu cầu cần duyệt) hoặc trang (fanpage).
 
 /** Cuộn tới thẻ bài viết id="post-<id>"; bài chưa hiện trên trang thì thử lại sau 100ms (tối đa 20 lần). */
 function scrollToPost(postId: string, attempt = 0) {
@@ -25,7 +25,10 @@ export function useOpenNotification() {
     markNotificationAsRead(notif.id);
 
     if (notif.targetType === 'profile') return navigate(`/profile/${notif.actor.id}`);
-    if (notif.targetType === 'group' && notif.targetId) return navigate(`/groups/${notif.targetId}`);
+    // Thông báo về bình luận → mở bài viết, tự mở khung bình luận và cuộn tới đúng bình luận
+    if (notif.commentId && notif.targetId) return navigate(`/post/${notif.targetId}?comment=${notif.commentId}`);
+    // Xin vào nhóm / bài chờ duyệt / báo cáo → mở thẳng tab Quản trị của nhóm
+    if (notif.targetType === 'group' && notif.targetId) return navigate(`/groups/${notif.targetId}${notif.focus === 'admin' ? '?tab=admin' : ''}`);
     if (notif.targetType === 'page' && notif.targetId) return navigate(`/pages/${notif.targetId}`);
     if (notif.targetType !== 'post' || !notif.targetId) return;
 

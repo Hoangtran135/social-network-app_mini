@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Image as ImageIcon, Trash2, Loader2, UserPlus, Send } from 'lucide-react';
 import { ReportButton } from '../SystemReport';
@@ -19,7 +19,7 @@ import { MentionSuggestions } from './MentionSuggestions';
 // Khung bình luận bên dưới một bài viết: ô viết bình luận (đính kèm ảnh, gắn thẻ bạn bè bằng @ hoặc bằng danh sách)
 // và danh sách bình luận 2 cấp: bình luận gốc, bên dưới là các câu trả lời của nó.
 
-export const CommentSection: React.FC<{ postId: string; disabled?: boolean }> = ({ postId, disabled = false }) => {
+export const CommentSection: React.FC<{ postId: string; disabled?: boolean; focusCommentId?: string }> = ({ postId, disabled = false, focusCommentId }) => {
   const { currentUser } = useAuth();
   const { comments, fetchComments, addComment, friends } = useSocial();
   const [text, setText] = useState('');
@@ -37,6 +37,18 @@ export const CommentSection: React.FC<{ postId: string; disabled?: boolean }> = 
   }, [postId]);
 
   const all = comments[postId] || [];
+
+  // Từ thông báo: bình luận tải về xong thì cuộn tới và viền sáng 2 giây (chỉ một lần)
+  const focused = useRef(false);
+  const hasFocusTarget = !!focusCommentId && all.some((c) => c.id === focusCommentId);
+  useEffect(() => {
+    if (!hasFocusTarget || focused.current) return;
+    focused.current = true;
+    const el = document.getElementById(`comment-${focusCommentId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.classList.add('ring-2', 'ring-blue-500', 'rounded-2xl');
+    setTimeout(() => el?.classList.remove('ring-2', 'ring-blue-500', 'rounded-2xl'), 2000);
+  }, [hasFocusTarget, focusCommentId]);
   const [sort, setSort] = useState<'oldest' | 'newest' | 'top'>('oldest');
   const byTime = (a: Comment, b: Comment) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   const sorters = { oldest: byTime, newest: (a: Comment, b: Comment) => byTime(b, a), top: (a: Comment, b: Comment) => reactionsOf(b).length - reactionsOf(a).length || byTime(a, b) };
@@ -162,7 +174,7 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; canReply?: boole
   };
 
   return (
-    <div className="flex items-start gap-2.5">
+    <div id={`comment-${c.id}`} className="flex items-start gap-2.5">
       <Link to={`/profile/${c.author.id}`}>
         <img src={c.author.avatar} alt="" className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full object-cover shrink-0`} />
       </Link>

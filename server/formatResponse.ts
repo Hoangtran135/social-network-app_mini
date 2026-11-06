@@ -142,6 +142,8 @@ export function notificationToJson(n: Doc) {
     content: n.content,
     targetId: n.targetId,
     targetType: n.targetType,
+    commentId: n.commentId,
+    focus: n.focus,
     isRead: n.isRead,
     createdAt: n.createdAt,
   };
