@@ -65,6 +65,10 @@ describe('formatResponse', () => {
     expect(json).not.toMatch(/SECRET|passwordHash|resetToken|blockedUsers/);
     expect(userToJson(null)).toBeNull();
   });
+  it('userToJson KHÔNG chứa email (riêng tư); meToJson thì có email của chính chủ', () => {
+    expect(userToJson(user)).not.toHaveProperty('email');
+    expect(meToJson(user)!.email).toBe('a@b.vn');
+  });
   it('meToJson có thêm blockedUserIds nhưng vẫn không lộ bí mật', () => {
     const json = meToJson(user)!;
     expect(json.blockedUserIds).toEqual(['x']);

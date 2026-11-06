@@ -144,17 +144,12 @@ describe('Quyền xem bình luận', () => {
     expect(res.body.comments).toEqual([]);
   });
 
-  it('lấy tất cả bình luận (không postId) chỉ gồm bài mình được xem', async () => {
+  it('không có postId → 400 (không còn chế độ "tất cả bình luận" vì quá nặng)', async () => {
     const a = await signUp(app);
-    const stranger = await signUp(app);
-    const hidden = await createPost(app, a, { privacy: 'only_me' });
-    const visible = await createPost(app, a);
-    await comment(a, hidden.id, { content: 'riêng tư' });
-    await comment(a, visible.id, { content: 'công khai' });
-    const res = await as(app, stranger).get('/api/comments');
-    const contents = res.body.comments.map((c: { content: string }) => c.content);
-    expect(contents).toContain('công khai');
-    expect(contents).not.toContain('riêng tư');
+    const res = await as(app, a).get('/api/comments');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/postId/);
+    expect((await as(app, a).get('/api/comments?postId[]=x')).status).toBe(400);
   });
 
   it('bình luận được sắp theo thời gian tăng dần', async () => {

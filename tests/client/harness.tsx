@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- file hỗ trợ test, không phải module giao diện */
 import React from 'react';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { render, screen, waitFor, act, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -15,6 +15,12 @@ const LocationProbe: React.FC = () => <div data-testid="location">{useLocation()
 /** Các callback IntersectionObserver đang đăng ký (cuộn vô hạn). Gọi triggerInfiniteScroll() để giả lập "cuộn tới cuối". */
 const observers: ((entries: { isIntersecting: boolean }[]) => void)[] = [];
 export const triggerInfiniteScroll = (isIntersecting = true) => act(() => observers.forEach((cb) => cb([{ isIntersecting }])));
+/** Giả lập một phần tử hiện / rời khỏi màn hình với tỉ lệ nhìn thấy `ratio` (vd reel chiếm ≥ 70% khung thì được phát). */
+export const triggerIntersection = async (isIntersecting: boolean, ratio = isIntersecting ? 1 : 0) => {
+  // Khi máy bận, hiệu ứng đăng ký observer của component có thể chậm hơn một nhịp → chờ có observer rồi mới kích hoạt
+  await waitFor(() => expect(observers.length).toBeGreaterThan(0));
+  await act(async () => observers.forEach((cb) => cb([{ isIntersecting, intersectionRatio: ratio } as { isIntersecting: boolean }])));
+};
 
 export function installBrowserStubs() {
   observers.length = 0;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { timeAgo, feelingText, fileSize } from '../../src/utils/format';
+import { timeAgo, feelingText, fileSize, formatCount } from '../../src/utils/format';
 import { detectMention, insertMention } from '../../src/utils/mention';
 import { toggleId } from '../../src/components/FriendPicker';
 
@@ -127,4 +127,18 @@ describe('toggleId', () => {
     expect(original).toEqual(['a']);
   });
   it('bật rồi tắt lại về trạng thái cũ', () => expect(toggleId(toggleId([], 'x'), 'x')).toEqual([]));
+});
+
+describe('formatCount', () => {
+  it.each([
+    [0, '0'],
+    [999, '999'],
+    [1000, '1K'],
+    [1200, '1.2K'],
+    [1500, '1.5K'],
+    [9999, '10K'],
+    [10000, '10K'],
+    [15400, '15K'],
+    [250000, '250K'],
+  ])('%i → %s', (n, expected) => expect(formatCount(n)).toBe(expected));
 });

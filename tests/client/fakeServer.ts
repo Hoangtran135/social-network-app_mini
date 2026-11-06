@@ -1,4 +1,4 @@
-import type { User, Post, Comment, Story, Conversation, Message, FriendRequest, NotificationItem } from '../../src/types';
+import type { User, Post, Comment, Story, Conversation, Message, FriendRequest, NotificationItem, Group, GroupMember, Page } from '../../src/types';
 
 // BACKEND GIẢ trong bộ nhớ cho test giao diện: thay module src/utils/api + src/utils/socket.
 // Nó mô phỏng các endpoint mà frontend gọi, đủ trung thực để test cả luồng (đăng nhập → xem bảng tin → đăng bài → bình luận...).
@@ -25,6 +25,8 @@ interface Db {
   me: User; users: User[]; friends: string[]; posts: Post[]; comments: Comment[]; stories: Story[];
   requestsIn: FriendRequest[]; requestsOut: FriendRequest[]; conversations: Conversation[]; messages: Record<string, Message[]>;
   notifications: NotificationItem[]; memories: Post[]; blocked: string[]; hidden: string[]; following: string[]; passwords: Record<string, string>; failNext: Set<string>;
+  pages: Page[]; pageFollows: string[]; pageAdmins: Record<string, string[]>;
+  groups: Group[]; members: Record<string, GroupMember[]>; reports: { id: string; groupId: string; postId: string; reporterId: string; reason: string }[];
 }
 
 export const calls: { method: string; path: string; body?: unknown }[] = [];
@@ -79,8 +81,44 @@ export function resetDb() {
     following: [],
     passwords: { 'u1@test.vn': 'secret123' },
     failNext: new Set<string>(),
+    ...seedGroups(me, f1, f2, s1, s2),
+    ...seedPages(me, f1, f2),
   });
+  db.posts.push(...seedReels(f1, s1));
   conversationsFix();
+}
+/** Dữ liệu Trang mặc định: pg1 "Trang Công Nghệ" (f1 là chủ, tôi chưa theo dõi); pg2 "Tiệm Của Tôi" (tôi là chủ, f2 là quản trị viên); pg3 "Trang Đã Theo Dõi" (f2 là chủ, tôi đang theo dõi). */
+function seedPages(me: User, f1: User, f2: User) {
+  const base = { category: 'business', description: '', followersCount: 0, createdAt: iso(2000), myRole: null, isFollowing: false } as const;
+  const pages: Page[] = [
+    { ...base, id: 'pg1', name: 'Trang Công Nghệ', ownerId: f1.id, followersCount: 5, description: 'Tin công nghệ mỗi ngày', website: 'https://cn.example' },
+    { ...base, id: 'pg2', name: 'Tiệm Của Tôi', ownerId: me.id, followersCount: 1, category: 'brand', address: 'Hà Nội' },
+    { ...base, id: 'pg3', name: 'Trang Đã Theo Dõi', ownerId: f2.id, followersCount: 9 },
+  ];
+  return { pages, pageFollows: ['pg3'], pageAdmins: { pg2: [f2.id] } as Record<string, string[]> };
+}
+
+/** Hai reel mặc định: của bạn một (công khai) và của người lạ (công khai). */
+function seedReels(f1: User, s1: User): Post[] {
+  const reel = (id: string, author: User, caption: string): Post => ({ id, author, content: caption, video: `/videos/${id}.mp4`, privacy: 'public', createdAt: iso(10), reactions: [], commentsCount: 0, sharesCount: 0, kind: 'reel', viewsCount: 3 });
+  return [reel('rl1', f1, 'Reel của bạn một #vui'), reel('rl2', s1, 'Reel của người lạ')];
+}
+
+/** Dữ liệu nhóm mặc định: g1 công khai (tôi là CHỦ NHÓM, f2 quản trị viên, f1 thành viên); g2 riêng tư có câu hỏi + duyệt bài (f1 là chủ, tôi CHƯA tham gia, s2 đang chờ duyệt); g3 công khai (tôi là thành viên thường). */
+function seedGroups(me: User, f1: User, f2: User, s1: User, s2: User) {
+  const base = { rules: [] as string[], joinQuestions: [] as string[], postApproval: false, description: '', membersCount: 0, createdAt: iso(1000), myRole: null, myStatus: null } as const;
+  const groups: Group[] = [
+    { ...base, id: 'g1', name: 'Nhóm Công Khai', privacy: 'public', ownerId: me.id, description: 'Nơi giao lưu mở', rules: ['Tôn trọng nhau', 'Không spam'] },
+    { ...base, id: 'g2', name: 'Nhóm Riêng Tư', privacy: 'private', ownerId: f1.id, joinQuestions: ['Bạn là ai?'], postApproval: true, description: 'Chỉ thành viên' },
+    { ...base, id: 'g3', name: 'Nhóm Của Bạn Một', privacy: 'public', ownerId: f1.id },
+  ];
+  const mem = (user: User, role: GroupMember['role'], status: GroupMember['status'] = 'active', answers?: GroupMember['answers']): GroupMember => ({ user, role, status, joinedAt: iso(500), answers });
+  const members: Record<string, GroupMember[]> = {
+    g1: [mem(me, 'owner'), mem(f2, 'admin'), mem(f1, 'member')],
+    g2: [mem(f1, 'owner'), mem(f2, 'member'), mem(s2, 'member', 'pending', [{ question: 'Bạn là ai?', answer: 'Tôi là bạn của Hai' }])],
+    g3: [mem(f1, 'owner'), mem(me, 'member'), mem(s1, 'member')],
+  };
+  return { groups, members, reports: [] };
 }
 const conversationsFix = () => {
   db.conversations[0].lastMessage = db.messages.cv1[1];
@@ -104,7 +142,7 @@ route('GET', '/auth/me', () => {
 });
 route('POST', '/auth/login', (_m, b) => {
   const user = db.users.find((u) => u.email === String(b.email).toLowerCase());
-  if (!user || db.passwords[user.email] !== b.password) fail(401, 'Email hoặc mật khẩu không chính xác.');
+  if (!user || db.passwords[user.email!] !== b.password) fail(401, 'Email hoặc mật khẩu không chính xác.');
   db.me = { ...user!, blockedUserIds: db.blocked };
   return { token: 'token-' + user!.id, user: db.me };
 });
@@ -161,8 +199,8 @@ route('PATCH', '/users/me', (_m, b) => {
   return { user: db.me };
 });
 route('PATCH', '/users/me/password', (_m, b) => {
-  if (b.currentPassword !== db.passwords[db.me.email]) fail(400, 'Mật khẩu hiện tại không chính xác.');
-  db.passwords[db.me.email] = b.newPassword;
+  if (b.currentPassword !== db.passwords[db.me.email!]) fail(400, 'Mật khẩu hiện tại không chính xác.');
+  db.passwords[db.me.email!] = b.newPassword;
   return { ok: true };
 });
 route('POST', '/users/([^/]+)/block', (m) => {
@@ -181,10 +219,11 @@ route('DELETE', '/users/([^/]+)/block', (m) => {
 const withSaved = (p: Post) => ({ ...p });
 const findPost = (id: string) => db.posts.find((p) => p.id === id) || fail(404, 'Không tìm thấy bài viết.');
 route('GET', '/posts', (_m, _b, q) => {
+  // (reel và bài nhóm không có ở bảng tin chung — giống server)
   const skip = Number(q.get('skip')) || 0;
   const limit = Number(q.get('limit')) || 30;
   const tag = q.get('tag')?.toLowerCase();
-  const list = db.posts.filter((p) => !db.blocked.includes(p.author.id) && !db.hidden.includes(p.id) && (!tag || (p.hashtags || []).includes(tag)));
+  const list = db.posts.filter((p) => !p.groupId && !p.kind && !db.blocked.includes(p.author.id) && !db.hidden.includes(p.id) && (!tag || (p.hashtags || []).includes(tag)));
   return { posts: list.slice(skip, skip + limit).map(withSaved) };
 });
 route('GET', '/posts/memories', () => ({ posts: db.memories }));
@@ -395,6 +434,355 @@ route('POST', '/messages/conversations/([^/]+)/messages/([^/]+)/react', (m, b) =
   else reactions[db.me.id] = b.emoji;
   message.reactions = Object.keys(reactions).length ? reactions : undefined;
   return { message };
+});
+
+// ---------- Nhóm giao lưu ----------
+// Mô phỏng đúng luật của server: nhóm công khai vào luôn / riêng tư chờ duyệt, vai trò chủ nhóm > quản trị viên > thành viên,
+// bài chờ duyệt, báo cáo, và bài nhóm KHÔNG có trong GET /posts (chỉ xem ở trang nhóm).
+const gMembership = (g: Group, userId = db.me.id) => db.members[g.id]?.find((m) => m.user.id === userId);
+const gRole = (g: Group) => {
+  const m = gMembership(g);
+  return m?.status === 'active' ? m.role : null;
+};
+const gIsAdmin = (g: Group) => gRole(g) === 'owner' || gRole(g) === 'admin';
+const findGroup = (id: string) => db.groups.find((g) => g.id === id) || fail(404, 'Không tìm thấy nhóm.');
+const countActive = (g: Group) => (db.members[g.id] || []).filter((m) => m.status === 'active').length;
+const groupJson = (g: Group): Group => {
+  const m = gMembership(g);
+  const admin = gIsAdmin(g);
+  return {
+    ...g,
+    membersCount: countActive(g),
+    myRole: gRole(g),
+    myStatus: m?.status ?? null,
+    ...(admin
+      ? {
+          pendingMembersCount: (db.members[g.id] || []).filter((x) => x.status === 'pending').length,
+          pendingPostsCount: db.posts.filter((p) => p.groupId === g.id && p.groupStatus === 'pending').length,
+          openReportsCount: db.reports.filter((r) => r.groupId === g.id).length,
+        }
+      : {}),
+  };
+};
+const groupNotify = (userId: string, g: Group, content: string) => {
+  if (userId === db.me.id) return;
+  db.notifications.unshift({ id: nextId('n'), userId, actor: db.me, type: 'system', content, targetId: g.id, targetType: 'group', isRead: false, createdAt: iso(0) });
+};
+
+route('GET', '/groups', (_m, _b, q) => {
+  const mine = q.get('scope') === 'mine';
+  const term = (q.get('q') || '').toLowerCase();
+  const groups = db.groups.filter((g) => (mine ? gRole(g) !== null : gRole(g) === null) && g.name.toLowerCase().includes(term));
+  return { groups: groups.map(groupJson) };
+});
+route('POST', '/groups', (_m, b) => {
+  if (!b.name || String(b.name).trim().length < 2) fail(400, 'Dữ liệu không hợp lệ.');
+  const g: Group = {
+    id: nextId('g'), name: b.name, description: b.description || '', rules: b.rules || [], privacy: b.privacy || 'public', ownerId: db.me.id,
+    postApproval: !!b.postApproval, joinQuestions: b.joinQuestions || [], membersCount: 1, createdAt: iso(0), myRole: 'owner', myStatus: 'active',
+  };
+  db.groups.unshift(g);
+  db.members[g.id] = [{ user: db.me, role: 'owner', status: 'active', joinedAt: iso(0) }];
+  return { group: groupJson(g) };
+});
+route('GET', '/groups/([^/]+)', (m) => ({ group: groupJson(findGroup(m[1])) }));
+route('PATCH', '/groups/([^/]+)', (m, b) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  if (b.privacy !== undefined && b.privacy !== g.privacy && gRole(g) !== 'owner') fail(403, 'Chỉ chủ nhóm mới được đổi quyền riêng tư của nhóm.');
+  Object.assign(g, b);
+  return { group: groupJson(g) };
+});
+route('DELETE', '/groups/([^/]+)', (m) => {
+  const g = findGroup(m[1]);
+  if (gRole(g) !== 'owner') fail(403, 'Chỉ chủ nhóm mới có quyền này.');
+  db.groups = db.groups.filter((x) => x.id !== g.id);
+  db.posts = db.posts.filter((p) => p.groupId !== g.id);
+  delete db.members[g.id];
+  return { ok: true };
+});
+route('POST', '/groups/([^/]+)/join', (m, b) => {
+  const g = findGroup(m[1]);
+  if (gMembership(g)) fail(409, gMembership(g)!.status === 'active' ? 'Bạn đã là thành viên của nhóm này.' : 'Bạn đã gửi yêu cầu tham gia, đang chờ duyệt.');
+  if (g.privacy === 'public') db.members[g.id].push({ user: db.me, role: 'member', status: 'active', joinedAt: iso(0) });
+  else {
+    const answers: string[] = b.answers || [];
+    if (g.joinQuestions.length && (answers.length !== g.joinQuestions.length || answers.some((a) => !a))) fail(400, 'Vui lòng trả lời tất cả câu hỏi trước khi xin tham gia.');
+    db.members[g.id].push({ user: db.me, role: 'member', status: 'pending', joinedAt: iso(0), answers: g.joinQuestions.map((question, i) => ({ question, answer: answers[i] })) });
+  }
+  return { group: groupJson(g) };
+});
+route('DELETE', '/groups/([^/]+)/join', (m) => {
+  const g = findGroup(m[1]);
+  const mem = gMembership(g);
+  if (!mem) fail(404, 'Bạn chưa tham gia nhóm này.');
+  if (mem!.role === 'owner') fail(400, 'Chủ nhóm không thể rời nhóm. Hãy chuyển quyền chủ nhóm hoặc xoá nhóm.');
+  db.members[g.id] = db.members[g.id].filter((x) => x.user.id !== db.me.id);
+  db.posts = db.posts.filter((p) => !(p.groupId === g.id && p.author.id === db.me.id && p.groupStatus === 'pending'));
+  return { ok: true };
+});
+route('GET', '/groups/([^/]+)/members', (m, _b, q) => {
+  const g = findGroup(m[1]);
+  const pending = q.get('status') === 'pending';
+  if (pending && !gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  if (!pending && g.privacy === 'private' && gRole(g) === null) fail(403, 'Chỉ thành viên mới xem được danh sách thành viên.');
+  const rank = { owner: 0, admin: 1, member: 2 };
+  const list = (db.members[g.id] || []).filter((x) => x.status === (pending ? 'pending' : 'active')).sort((a, b) => rank[a.role] - rank[b.role]);
+  return { members: list.map((x) => ({ ...x, answers: pending ? x.answers : undefined })) };
+});
+route('POST', '/groups/([^/]+)/members/([^/]+)/(approve|reject)', (m) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  const mem = db.members[g.id].find((x) => x.user.id === m[2] && x.status === 'pending');
+  if (!mem) fail(404, 'Không có yêu cầu tham gia từ người này.');
+  if (m[3] === 'approve') mem!.status = 'active';
+  else db.members[g.id] = db.members[g.id].filter((x) => x !== mem);
+  groupNotify(m[2], g, m[3] === 'approve' ? `đã chấp nhận yêu cầu tham gia nhóm "${g.name}" của bạn.` : `đã từ chối yêu cầu tham gia nhóm "${g.name}" của bạn.`);
+  return { ok: true };
+});
+route('DELETE', '/groups/([^/]+)/members/([^/]+)', (m) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  const mem = db.members[g.id].find((x) => x.user.id === m[2] && x.status === 'active');
+  if (!mem) fail(404, 'Không tìm thấy thành viên này trong nhóm.');
+  if (mem!.role === 'owner') fail(403, 'Không thể xoá chủ nhóm.');
+  if (mem!.user.id === db.me.id) fail(400, 'Bạn không thể tự xoá mình. Hãy dùng chức năng rời nhóm.');
+  if (mem!.role === 'admin' && gRole(g) !== 'owner') fail(403, 'Chỉ chủ nhóm mới xoá được quản trị viên.');
+  db.members[g.id] = db.members[g.id].filter((x) => x !== mem);
+  groupNotify(m[2], g, `đã xoá bạn khỏi nhóm "${g.name}".`);
+  return { ok: true };
+});
+route('PATCH', '/groups/([^/]+)/members/([^/]+)', (m, b) => {
+  const g = findGroup(m[1]);
+  if (gRole(g) !== 'owner') fail(403, 'Chỉ chủ nhóm mới có quyền này.');
+  const mem = db.members[g.id].find((x) => x.user.id === m[2] && x.status === 'active');
+  if (!mem) fail(404, 'Không tìm thấy thành viên này trong nhóm.');
+  if (mem!.role === 'owner') fail(400, 'Không thể đổi vai trò của chủ nhóm.');
+  mem!.role = b.role;
+  groupNotify(m[2], g, b.role === 'admin' ? `đã chỉ định bạn làm quản trị viên nhóm "${g.name}".` : `đã gỡ quyền quản trị viên của bạn trong nhóm "${g.name}".`);
+  return { ok: true };
+});
+route('POST', '/groups/([^/]+)/transfer', (m, b) => {
+  const g = findGroup(m[1]);
+  if (gRole(g) !== 'owner') fail(403, 'Chỉ chủ nhóm mới có quyền này.');
+  const target = db.members[g.id].find((x) => x.user.id === b.userId && x.status === 'active');
+  if (!target) fail(404, 'Người này chưa là thành viên của nhóm.');
+  target!.role = 'owner';
+  gMembership(g)!.role = 'admin';
+  g.ownerId = b.userId;
+  return { ok: true };
+});
+
+route('GET', '/groups/([^/]+)/posts', (m, _b, q) => {
+  const g = findGroup(m[1]);
+  const pending = q.get('status') === 'pending';
+  if (pending) {
+    if (gRole(g) === null) fail(403, 'Bạn cần là thành viên của nhóm.');
+    return { posts: db.posts.filter((p) => p.groupId === g.id && p.groupStatus === 'pending' && (gIsAdmin(g) || p.author.id === db.me.id)) };
+  }
+  if (g.privacy === 'private' && gRole(g) === null) fail(403, 'Chỉ thành viên mới xem được bài viết của nhóm.');
+  return { posts: db.posts.filter((p) => p.groupId === g.id && p.groupStatus === 'approved') };
+});
+route('POST', '/groups/([^/]+)/posts', (m, b) => {
+  const g = findGroup(m[1]);
+  if (gRole(g) === null) fail(403, 'Bạn cần là thành viên của nhóm.');
+  if (!b.content && !b.images?.length && !b.video) fail(400, 'Bài viết không được để trống.');
+  const needs = g.postApproval && gRole(g) === 'member';
+  const post: Post = {
+    id: nextId('p'), author: db.me, content: b.content, images: b.images?.length ? b.images : undefined, video: b.video, privacy: 'only_me', feeling: b.feeling, location: b.location,
+    createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0, isSaved: false, pinned: false, groupId: g.id, groupName: g.name, groupStatus: needs ? 'pending' : 'approved',
+  };
+  db.posts.unshift(post);
+  return { post };
+});
+route('POST', '/groups/([^/]+)/posts/([^/]+)/(approve|reject)', (m) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  const post = db.posts.find((p) => p.id === m[2] && p.groupId === g.id && p.groupStatus === 'pending');
+  if (!post) fail(404, 'Không tìm thấy bài viết đang chờ duyệt.');
+  if (m[3] === 'approve') {
+    post!.groupStatus = 'approved';
+    return { post };
+  }
+  db.posts = db.posts.filter((p) => p !== post);
+  return { ok: true };
+});
+route('DELETE', '/groups/([^/]+)/posts/([^/]+)', (m) => {
+  const g = findGroup(m[1]);
+  const post = db.posts.find((p) => p.id === m[2] && p.groupId === g.id);
+  if (!post) fail(404, 'Không tìm thấy bài viết.');
+  if (post!.author.id !== db.me.id && !gIsAdmin(g)) fail(403, 'Bạn không có quyền xoá bài viết này.');
+  db.posts = db.posts.filter((p) => p !== post);
+  db.reports = db.reports.filter((r) => r.postId !== post!.id);
+  return { ok: true };
+});
+route('POST', '/groups/([^/]+)/posts/([^/]+)/report', (m, b) => {
+  const g = findGroup(m[1]);
+  if (gRole(g) === null) fail(403, 'Bạn cần là thành viên của nhóm.');
+  const post = db.posts.find((p) => p.id === m[2] && p.groupId === g.id && p.groupStatus === 'approved');
+  if (!post) fail(404, 'Không tìm thấy bài viết.');
+  if (post!.author.id === db.me.id) fail(400, 'Bạn không thể báo cáo bài viết của chính mình.');
+  if (db.reports.some((r) => r.postId === post!.id && r.reporterId === db.me.id)) fail(409, 'Đã có lỗi xảy ra.');
+  db.reports.push({ id: nextId('rp'), groupId: g.id, postId: post!.id, reporterId: db.me.id, reason: b.reason || '' });
+  return { ok: true };
+});
+route('GET', '/groups/([^/]+)/reports', (m) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  return {
+    reports: db.reports
+      .filter((r) => r.groupId === g.id)
+      .map((r) => ({ id: r.id, reporter: byId(r.reporterId)!, reason: r.reason, createdAt: iso(1), post: db.posts.find((p) => p.id === r.postId)! })),
+  };
+});
+route('POST', '/groups/([^/]+)/reports/([^/]+)/resolve', (m, b) => {
+  const g = findGroup(m[1]);
+  if (!gIsAdmin(g)) fail(403, 'Chỉ quản trị viên nhóm mới có quyền này.');
+  const report = db.reports.find((r) => r.id === m[2] && r.groupId === g.id);
+  if (!report) fail(404, 'Không tìm thấy báo cáo.');
+  if (b.action === 'remove') {
+    db.posts = db.posts.filter((p) => p.id !== report!.postId);
+    db.reports = db.reports.filter((r) => r.postId !== report!.postId);
+  } else db.reports = db.reports.filter((r) => r !== report);
+  return { ok: true };
+});
+
+// ---------- Trang (fanpage) ----------
+// Mô phỏng luật của server: chủ trang > quản trị viên > người xem; chỉ quản trị viên đăng bài / sửa; theo dõi không trùng.
+const pgAdminIds = (pg: Page) => [pg.ownerId, ...(db.pageAdmins[pg.id] || [])];
+const pgRole = (pg: Page): Page['myRole'] => (pg.ownerId === db.me.id ? 'owner' : (db.pageAdmins[pg.id] || []).includes(db.me.id) ? 'admin' : null);
+const findPage = (id: string) => db.pages.find((p) => p.id === id) || fail(404, 'Không tìm thấy trang.');
+const pageJson = (pg: Page): Page => ({
+  ...pg,
+  myRole: pgRole(pg),
+  isFollowing: db.pageFollows.includes(pg.id),
+  admins: pgRole(pg) ? pgAdminIds(pg).map((id) => byId(id)!).filter(Boolean) : undefined,
+});
+const requirePageAdmin = (pg: Page) => pgRole(pg) || fail(403, 'Chỉ quản trị viên của trang mới có quyền này.');
+
+route('GET', '/pages', (_m, _b, q) => {
+  const scope = q.get('scope');
+  const term = (q.get('q') || '').toLowerCase();
+  const pages = db.pages.filter((p) => p.name.toLowerCase().includes(term)).filter((p) => (scope === 'mine' ? pgRole(p) : scope === 'following' ? db.pageFollows.includes(p.id) : !pgRole(p) && !db.pageFollows.includes(p.id)));
+  return { pages: pages.map(pageJson) };
+});
+route('POST', '/pages', (_m, b) => {
+  if (!b.name || String(b.name).trim().length < 2) fail(400, 'Dữ liệu không hợp lệ.');
+  const pg: Page = { id: nextId('pg'), name: b.name, category: b.category || 'other', description: b.description || '', website: b.website, address: b.address, ownerId: db.me.id, followersCount: 0, createdAt: iso(0), myRole: 'owner', isFollowing: false };
+  db.pages.unshift(pg);
+  return { page: pageJson(pg) };
+});
+route('GET', '/pages/([^/]+)', (m) => ({ page: pageJson(findPage(m[1])) }));
+route('PATCH', '/pages/([^/]+)', (m, b) => {
+  const pg = findPage(m[1]);
+  requirePageAdmin(pg);
+  Object.assign(pg, b);
+  return { page: pageJson(pg) };
+});
+route('DELETE', '/pages/([^/]+)', (m) => {
+  const pg = findPage(m[1]);
+  if (pgRole(pg) !== 'owner') fail(403, 'Chỉ chủ trang mới có quyền này.');
+  db.pages = db.pages.filter((p) => p !== pg);
+  db.posts = db.posts.filter((p) => p.pageId !== pg.id);
+  return { ok: true };
+});
+route('POST', '/pages/([^/]+)/follow', (m) => {
+  const pg = findPage(m[1]);
+  if (!db.pageFollows.includes(pg.id)) {
+    db.pageFollows.push(pg.id);
+    pg.followersCount += 1;
+  }
+  return { page: pageJson(pg) };
+});
+route('DELETE', '/pages/([^/]+)/follow', (m) => {
+  const pg = findPage(m[1]);
+  if (db.pageFollows.includes(pg.id)) {
+    db.pageFollows = db.pageFollows.filter((id) => id !== pg.id);
+    pg.followersCount = Math.max(0, pg.followersCount - 1);
+  }
+  return { page: pageJson(pg) };
+});
+route('GET', '/pages/([^/]+)/followers', (m) => {
+  requirePageAdmin(findPage(m[1]));
+  return { users: db.users.filter((u) => u.id === 'f2') };
+});
+route('POST', '/pages/([^/]+)/admins', (m, b) => {
+  const pg = findPage(m[1]);
+  if (pgRole(pg) !== 'owner') fail(403, 'Chỉ chủ trang mới có quyền này.');
+  if (pgAdminIds(pg).includes(b.userId)) fail(409, 'Người này đã là quản trị viên của trang.');
+  (db.pageAdmins[pg.id] ||= []).push(b.userId);
+  return { page: pageJson(pg) };
+});
+route('DELETE', '/pages/([^/]+)/admins/([^/]+)', (m) => {
+  const pg = findPage(m[1]);
+  if (pgRole(pg) !== 'owner' && m[2] !== db.me.id) fail(403, 'Chỉ chủ trang mới gỡ được quản trị viên khác.');
+  db.pageAdmins[pg.id] = (db.pageAdmins[pg.id] || []).filter((id) => id !== m[2]);
+  return { page: pageJson(pg) };
+});
+route('GET', '/pages/([^/]+)/posts', (m) => ({ posts: db.posts.filter((p) => p.pageId === findPage(m[1]).id) }));
+route('POST', '/pages/([^/]+)/posts', (m, b) => {
+  const pg = findPage(m[1]);
+  requirePageAdmin(pg);
+  if (!b.content && !b.images?.length && !b.video) fail(400, 'Bài viết không được để trống.');
+  const post: Post = { id: nextId('p'), author: db.me, content: b.content, images: b.images?.length ? b.images : undefined, video: b.video, privacy: 'public', createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0, pageId: pg.id, pageName: pg.name, pageAvatar: pg.avatar };
+  db.posts.unshift(post);
+  return { post };
+});
+route('DELETE', '/pages/([^/]+)/posts/([^/]+)', (m) => {
+  const pg = findPage(m[1]);
+  requirePageAdmin(pg);
+  const post = db.posts.find((p) => p.id === m[2] && p.pageId === pg.id) || fail(404, 'Không tìm thấy bài viết.');
+  db.posts = db.posts.filter((p) => p !== post);
+  return { ok: true };
+});
+
+// ---------- Reels ----------
+const reelsVisible = () => db.posts.filter((p) => p.kind === 'reel' && !db.blocked.includes(p.author.id) && !db.hidden.includes(p.id) && (p.privacy !== 'friends' || p.author.id === db.me.id || isFriend(p.author.id)));
+route('GET', '/reels', (_m, _b, q) => {
+  const skip = Number(q.get('skip')) || 0;
+  const limit = Number(q.get('limit')) || 10;
+  return { reels: reelsVisible().slice(skip, skip + limit) };
+});
+route('GET', '/reels/([^/]+)', (m) => ({ reel: reelsVisible().find((p) => p.id === m[1]) || fail(404, 'Không tìm thấy reel.') }));
+route('POST', '/reels', (_m, b) => {
+  if (!b.video) fail(400, 'Dữ liệu không hợp lệ.');
+  const reel: Post = { id: nextId('r'), author: db.me, content: b.caption || '', video: b.video, privacy: b.privacy || 'public', createdAt: iso(0), reactions: [], commentsCount: 0, sharesCount: 0, kind: 'reel', viewsCount: 0 };
+  db.posts.unshift(reel);
+  return { reel };
+});
+route('POST', '/reels/([^/]+)/view', (m) => {
+  const reel = reelsVisible().find((p) => p.id === m[1]) || fail(404, 'Không tìm thấy reel.');
+  reel.viewsCount = (reel.viewsCount || 0) + 1;
+  return { viewsCount: reel.viewsCount };
+});
+
+// ---------- Tìm kiếm tổng hợp ----------
+// Bản rút gọn của server: lọc theo từ khoá và quyền xem; lý do "Bạn bè" / "Nhóm của bạn" / "Đang theo dõi" để kiểm tra giao diện.
+route('GET', '/search', (_m, _b, q) => {
+  const term = (q.get('q') || '').trim().toLowerCase();
+  const type = q.get('type') || 'all';
+  const limit = type === 'all' ? 5 : Number(q.get('limit')) || 20;
+  const want = (t: string) => type === 'all' || type === t;
+  if (!term) return { query: '', people: [], groups: [], pages: [], posts: [] };
+  const people = want('people')
+    ? db.users.filter((u) => u.id !== db.me.id && !db.blocked.includes(u.id) && `${u.name} ${u.username}`.toLowerCase().includes(term))
+        .sort((a, b) => Number(isFriend(b.id)) - Number(isFriend(a.id)))
+        .slice(0, limit)
+        .map((user) => ({ user, reasons: isFriend(user.id) ? ['Bạn bè'] : db.following.includes(user.id) ? ['Đang theo dõi'] : [] }))
+    : [];
+  const groups = want('groups')
+    ? db.groups.filter((g) => g.name.toLowerCase().includes(term)).slice(0, limit).map((g) => ({ group: groupJson(g), reasons: gRole(g) ? ['Nhóm của bạn'] : [] }))
+    : [];
+  const pages = want('pages')
+    ? db.pages.filter((p) => p.name.toLowerCase().includes(term)).slice(0, limit).map((p) => ({ page: pageJson(p), reasons: pgRole(p) ? ['Bạn quản trị'] : db.pageFollows.includes(p.id) ? ['Đang theo dõi'] : [] }))
+    : [];
+  const posts = want('posts')
+    ? db.posts
+        .filter((p) => !db.blocked.includes(p.author.id) && p.content.toLowerCase().includes(term) && (p.groupId ? p.groupStatus === 'approved' && gRole(findGroup(p.groupId)) !== null : p.privacy !== 'friends' || isFriend(p.author.id) || p.author.id === db.me.id))
+        .slice(0, limit)
+        .map((post) => ({ post, reasons: isFriend(post.author.id) ? ['Bạn bè'] : [] }))
+    : [];
+  return { query: term, people, groups, pages, posts };
 });
 
 // ---------- Thông báo ----------

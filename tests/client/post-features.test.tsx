@@ -121,7 +121,7 @@ describe('Hashtag trong bài viết', () => {
     const { user } = renderApp('/');
     await feedLoaded();
     await user.type(screen.getByRole('searchbox'), 'vui');
-    await screen.findByText(/Mọi người|Không tìm thấy/);
+    await screen.findByRole('link', { name: /Xem tất cả kết quả cho "vui"/ }); // bảng kết quả đã hiện
     expect(screen.queryByText(/Xem bài viết có #/)).toBeNull();
   });
 
