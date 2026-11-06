@@ -4,6 +4,7 @@ import { useSocial } from '../context/SocialContext';
 import { useOpenNotification } from '../hooks/useOpenNotification';
 import { NotificationItem } from '../types';
 import { timeAgo } from '../utils/format';
+import { NotificationAvatar, NotificationText } from '../components/NotificationParts';
 import { PageHeader, EmptyState, ErrorState, ListSkeleton, TabButton } from '../components/ui';
 
 // Trang thông báo (/notifications): lọc theo loại, đánh dấu tất cả đã đọc, tải thêm.
@@ -56,12 +57,12 @@ export const NotificationsPage: React.FC = () => {
           {shown.map((n) => (
             <button key={n.id} onClick={() => openNotification(n)} className={`w-full text-left p-3.5 sm:p-4 flex items-start gap-3.5 hover:bg-slate-50 ${n.isRead ? '' : 'bg-blue-50/40'}`}>
               <div className="relative shrink-0">
-                <img src={n.actor.avatar} alt="" loading="lazy" className="w-12 h-12 rounded-2xl object-cover" />
+                <NotificationAvatar n={n} className="w-12 h-12 rounded-2xl" />
                 <span className="absolute -bottom-1 -right-1 text-sm">{TYPE_ICONS[n.type]}</span>
               </div>
               <div className="flex-1 min-w-0 text-sm">
                 <p className="text-slate-800 break-words">
-                  <b>{n.actor.name}</b> {n.content}
+                  <NotificationText n={n} />
                 </p>
                 <span className={`text-[11px] ${n.isRead ? 'text-slate-400' : 'text-blue-600 font-semibold'}`}>{timeAgo(n.createdAt)}</span>
               </div>

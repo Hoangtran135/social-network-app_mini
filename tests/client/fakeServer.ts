@@ -1,3 +1,4 @@
+import { seedAdmin, registerAdminRoutes, type AdminDb } from './fakeAdmin';
 import type { User, Post, Comment, Story, Conversation, Message, FriendRequest, NotificationItem, Group, GroupMember, Page } from '../../src/types';
 
 // BACKEND GIẢ trong bộ nhớ cho test giao diện: thay module src/utils/api + src/utils/socket.
@@ -7,7 +8,7 @@ import type { User, Post, Comment, Story, Conversation, Message, FriendRequest, 
 //   vi.mock('../../src/utils/socket', async () => (await import('./fakeServer')).socketModule);
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code?: string) {
     super(message);
   }
 }
@@ -26,6 +27,7 @@ interface Db {
   requestsIn: FriendRequest[]; requestsOut: FriendRequest[]; conversations: Conversation[]; messages: Record<string, Message[]>;
   notifications: NotificationItem[]; memories: Post[]; blocked: string[]; hidden: string[]; following: string[]; passwords: Record<string, string>; failNext: Set<string>;
   pages: Page[]; pageFollows: string[]; pageAdmins: Record<string, string[]>;
+  admin: AdminDb;
   groups: Group[]; members: Record<string, GroupMember[]>; reports: { id: string; groupId: string; postId: string; reporterId: string; reason: string }[];
 }
 
@@ -81,6 +83,7 @@ export function resetDb() {
     following: [],
     passwords: { 'u1@test.vn': 'secret123' },
     failNext: new Set<string>(),
+    admin: seedAdmin(),
     ...seedGroups(me, f1, f2, s1, s2),
     ...seedPages(me, f1, f2),
   });
@@ -143,6 +146,7 @@ route('GET', '/auth/me', () => {
 route('POST', '/auth/login', (_m, b) => {
   const user = db.users.find((u) => u.email === String(b.email).toLowerCase());
   if (!user || db.passwords[user.email!] !== b.password) fail(401, 'Email hoặc mật khẩu không chính xác.');
+  if (user!.email === 'banned@test.vn') throw new ApiError(403, 'Tài khoản của bạn đã bị khoá. Lý do: Spam', 'banned');
   db.me = { ...user!, blockedUserIds: db.blocked };
   return { token: 'token-' + user!.id, user: db.me };
 });
@@ -801,6 +805,8 @@ route('PATCH', '/notifications/([^/]+)/read', (m) => {
   return { ok: true };
 });
 
+registerAdminRoutes(route, () => db, fail);
+
 /** Xử lý một request giả. `db.failNext.add("POST /posts")` làm request kế tiếp tới route đó trả lỗi 500. */
 export async function handle(method: string, fullPath: string, body?: unknown) {
   calls.push({ method, path: fullPath, body });
@@ -822,6 +828,7 @@ export async function handle(method: string, fullPath: string, body?: unknown) {
 let token: string | null = null;
 export const apiModule = {
   ApiError,
+  SESSION_ENDED_EVENT: 'auth:session-ended',
   getToken: () => token,
   setToken: (t: string | null) => void (token = t),
   api: {

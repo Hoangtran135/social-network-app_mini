@@ -15,6 +15,7 @@ import { PostFormModal } from './PostFormModal';
 import { PostContent } from './PostContent';
 import { EditHistoryDialog, ImagePreview, ReportDialog, SendToFriendDialog, ShareDialog } from './PostDialogs';
 import { REACTIONS } from '../../utils/reactions';
+import { SystemReportDialog } from '../SystemReport';
 
 // Thẻ hiển thị MỘT bài viết (dùng ở bảng tin, trang cá nhân, đã lưu, kỷ niệm):
 // phần đầu (tác giả, thời gian, quyền riêng tư, menu "..."), nội dung + ảnh/video, số cảm xúc / bình luận / chia sẻ,
@@ -67,7 +68,8 @@ export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; page
   const [showSendToFriend, setShowSendToFriend] = useState(false);
   const [shareDialog, setShareDialog] = useState(false); // hộp thoại chia sẻ kèm lời bình
   const [showHistory, setShowHistory] = useState(false); // lịch sử chỉnh sửa
-  const [reportOpen, setReportOpen] = useState(false); // hộp thoại báo cáo bài trong nhóm
+  const [reportOpen, setReportOpen] = useState(false); // hộp thoại báo cáo bài trong nhóm (gửi quản trị viên nhóm)
+  const [systemReportOpen, setSystemReportOpen] = useState(false); // hộp thoại báo cáo vi phạm (gửi quản trị hệ thống)
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const menuRef = useClickOutside(() => setMenu(null));
   const hasReactions = post.reactions.length > 0;
@@ -175,6 +177,7 @@ export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; page
                 })}
               />
               {isGroupPost && !isOwner && !!groupRole && post.groupStatus !== 'pending' && <MenuItem icon={Flag} label="Báo cáo bài viết" onClick={run(() => setReportOpen(true))} />}
+              {!isOwner && <MenuItem icon={Flag} label="Báo cáo vi phạm" onClick={run(() => setSystemReportOpen(true))} />}
               {pageAdmin && !isOwner && !!post.pageId && (
                 <MenuItem
                   icon={Trash2}
@@ -335,6 +338,7 @@ export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; page
           }}
         />
       )}
+      {systemReportOpen && <SystemReportDialog targetType="post" targetId={post.id} onClose={() => setSystemReportOpen(false)} />}
       {showHistory && <EditHistoryDialog post={post} onClose={() => setShowHistory(false)} />}
       {previewImage && <ImagePreview src={previewImage} onClose={() => setPreviewImage(null)} />}
     </article>

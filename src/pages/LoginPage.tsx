@@ -18,10 +18,10 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const ok = await login(email, password);
+    const result = await login(email, password);
     setLoading(false);
-    if (ok) navigate('/');
-    else setError('Email hoặc mật khẩu không chính xác.');
+    if (result === true) navigate('/');
+    else setError(result || 'Email hoặc mật khẩu không chính xác.'); // tài khoản bị khoá → hiện lời nhắn của server
   };
 
   return (

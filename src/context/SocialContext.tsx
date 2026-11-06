@@ -3,6 +3,7 @@ import { Post, Comment, Story, Conversation, Message, FriendRequest, Notificatio
 import { useAuth } from './AuthContext';
 import { api, ApiError } from '../utils/api';
 import { getSocket } from '../utils/socket';
+import { notificationPlain } from '../utils/notificationText';
 
 // "KHO DỮ LIỆU" CHÍNH CỦA FRONTEND: giữ bài viết, bình luận, story, bạn bè, tin nhắn, thông báo trong state
 // và cung cấp các hàm thao tác (đăng bài, bình luận, kết bạn, nhắn tin...). Mỗi hàm: gọi API → cập nhật state.
@@ -15,7 +16,7 @@ const NOTIFS_PAGE = 30;
 type ToastType = 'success' | 'error' | 'info';
 
 function useSocialState() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout, refreshUser } = useAuth();
   const myId = currentUser?.id;
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -210,7 +211,7 @@ function useSocialState() {
         ),
       'notification:new': (notif: NotificationItem) => {
         setNotifications((list) => [notif, ...list]);
-        showToast(`${notif.actor.name} ${notif.content}`, 'info');
+        showToast(notificationPlain(notif), 'info');
         if (notif.type === 'friend_accept') {
           setSentFriendRequests((list) => list.filter((r) => r.receiverId !== notif.actor.id));
           setFriends((list) => [notif.actor, ...list.filter((f) => f.id !== notif.actor.id)]);
@@ -239,6 +240,10 @@ function useSocialState() {
       'friend-request:rejected': ({ requestId }: { requestId: string }) => setSentFriendRequests((list) => list.filter((r) => r.id !== requestId)),
       'friend-request:cancelled': ({ requestId }: { requestId: string }) => setFriendRequests((list) => list.filter((r) => r.id !== requestId)),
       'friend:removed': ({ userId }: { userId: string }) => setFriends((list) => list.filter((f) => f.id !== userId)),
+      // Quản trị hệ thống khoá tài khoản này → đăng xuất ngay (trang đăng nhập sẽ hiện lý do khi đăng nhập lại)
+      'account:banned': () => logout(),
+      // Vừa được cấp / thu hồi quyền quản trị → tải lại thông tin để menu và trang /admin khớp ngay
+      'account:role': () => void refreshUser(),
     };
 
     Object.entries(handlers).forEach(([event, handler]) => socket.on(event, handler));

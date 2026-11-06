@@ -187,6 +187,10 @@
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50;
   }
+  /* Nút thao tác nguy hiểm (xoá, khoá...) */
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50;
+  }
   /* Nút nhỏ (trong thẻ nhỏ, danh sách): cao 32px */
   /* Nút đổi nhãn theo trạng thái (Thêm bạn bè / Hủy lời mời / Bạn bè...): bề rộng cố định để các nút bên cạnh không bị đẩy */
   .btn-stable {

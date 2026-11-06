@@ -28,6 +28,15 @@ import { ReelsPage } from './pages/ReelsPage';
 import { SearchPage } from './pages/SearchPage';
 import { PostPage } from './pages/PostPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { AdminLayout } from './layout/AdminLayout';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminPostsPage } from './pages/admin/AdminPostsPage';
+import { AdminCommentsPage } from './pages/admin/AdminCommentsPage';
+import { AdminGroupsPage } from './pages/admin/AdminGroupsPage';
+import { AdminReportsPage } from './pages/admin/AdminReportsPage';
+import { AdminAnnouncementsPage } from './pages/admin/AdminAnnouncementsPage';
+import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { PageLoading } from './components/ui';
 
 // Component gốc của giao diện: bọc các "Provider" (dữ liệu dùng chung) và khai báo đường dẫn → trang.
@@ -38,6 +47,12 @@ const RequireLogin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { currentUser, isLoading } = useAuth();
   if (isLoading) return <div className="min-h-screen"><PageLoading /></div>;
   return currentUser ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+/** Trang chỉ dành cho quản trị hệ thống (đặt TRONG RequireLogin): người dùng thường bị đưa về bảng tin. Quyền bị thu hồi lúc đang xem cũng bị đưa ra ngay. */
+const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useAuth();
+  return currentUser?.role === 'admin' ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 /** Chuyển sang trang khác thì cuộn lên đầu trang (đổi query như ?tab= thì không cuộn). */
@@ -77,6 +92,18 @@ export const AppRoutes: React.FC = () => (
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/post/:id" element={<PostPage />} />
+    </Route>
+
+    {/* Khu quản trị hệ thống: bố cục riêng (AdminLayout), chỉ tài khoản có quyền admin */}
+    <Route path="/admin" element={<RequireLogin><RequireAdmin><AdminLayout /></RequireAdmin></RequireLogin>}>
+      <Route index element={<AdminDashboardPage />} />
+      <Route path="users" element={<AdminUsersPage />} />
+      <Route path="posts" element={<AdminPostsPage />} />
+      <Route path="comments" element={<AdminCommentsPage />} />
+      <Route path="groups" element={<AdminGroupsPage />} />
+      <Route path="reports" element={<AdminReportsPage />} />
+      <Route path="announcements" element={<AdminAnnouncementsPage />} />
+      <Route path="audit" element={<AdminAuditPage />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/" replace />} />

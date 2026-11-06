@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Lock, Users, FileText, Info, ShieldCheck, Clock } from 'lucide-react';
+import { Lock, Users, FileText, Info, ShieldCheck, Clock, Flag } from 'lucide-react';
+import { ReportButton } from '../components/SystemReport';
 import { api, ApiError } from '../utils/api';
 import { Group } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -173,6 +174,11 @@ export const GroupPage: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
+            {group.myRole !== 'owner' && (
+              <ReportButton targetType="group" targetId={group.id} label="Báo cáo nhóm" className="icon-btn">
+                <Flag className="w-4 h-4" />
+              </ReportButton>
+            )}
             {group.myStatus === null && (
               <button onClick={onJoinClick} disabled={busy} className="btn-primary btn-stable">
                 {group.privacy === 'public' ? 'Tham gia nhóm' : 'Xin tham gia'}

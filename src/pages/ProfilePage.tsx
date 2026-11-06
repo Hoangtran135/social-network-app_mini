@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Edit3, UserPlus, UserCheck, MessageCircle, Image as ImageIcon, Users, FileText, Info, Ban, Briefcase, GraduationCap, MapPin, CalendarDays, Globe,
+  Edit3, UserPlus, UserCheck, MessageCircle, Image as ImageIcon, Users, FileText, Info, Ban, Flag, Briefcase, GraduationCap, MapPin, CalendarDays, Globe,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../context/SocialContext';
@@ -10,6 +10,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { User } from '../types';
 import { api } from '../utils/api';
 import { EmptyState, PageLoading, TabButton, AvatarFrame } from '../components/ui';
+import { ReportButton } from '../components/SystemReport';
 import { SOCIAL_PLATFORMS } from '../utils/socialLinks';
 import { CreatePostBox } from '../components/post/CreatePostBox';
 import { PostCard } from '../components/post/PostCard';
@@ -154,6 +155,9 @@ export const ProfilePage: React.FC = () => {
                   >
                     <Ban className="w-4 h-4" />
                   </button>
+                  <ReportButton targetType="user" targetId={user.id} label="Báo cáo người dùng" className="btn-secondary px-3 hover:!bg-rose-50 hover:!text-rose-600">
+                    <Flag className="w-4 h-4" />
+                  </ReportButton>
                 </>
               )}
             </div>

@@ -1,6 +1,6 @@
 import React, { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LucideIcon, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
+import { LucideIcon, Eye, EyeOff, Loader2, AlertTriangle, X } from 'lucide-react';
 import { frameClass } from '../utils/avatarFrames';
 
 // Các mảnh giao diện nhỏ dùng lại ở nhiều trang: tiêu đề trang, màn hình trống, nút tab, ô nhập có nhãn, ảnh đại diện.
@@ -238,3 +238,24 @@ export const AdminSection: React.FC<{ icon: LucideIcon; title: string; count?: n
 
 /** Dòng chữ mờ cho trạng thái "không có gì" trong một mục quản trị. */
 export const MutedText: React.FC<{ children: React.ReactNode }> = ({ children }) => <p className="text-sm text-slate-400 py-2">{children}</p>;
+
+/** Khung chung: nền mờ (bấm ra ngoài để đóng) + thẻ trắng có tiêu đề và nút đóng. */
+export const DialogShell: React.FC<{ label: string; title: string; onClose: () => void; size?: 'sm' | 'md'; scroll?: boolean; children: React.ReactNode }> = ({ label, title, onClose, size = 'md', scroll = false, children }) => (
+  <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      className={`animate-pop bg-white rounded-2xl w-full p-5 ${size === 'sm' ? 'max-w-sm' : 'max-w-md'} ${scroll ? 'max-h-[80dvh] flex flex-col' : ''}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="section-title">{title}</h3>
+        <button onClick={onClose} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      {children}
+    </div>
+  </div>
+);

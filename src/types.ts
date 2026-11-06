@@ -25,6 +25,7 @@ export interface User {
   lastActive?: string;
   blockedUserIds?: string[]; // chỉ có với chính mình
   emailVerified?: boolean; // chỉ có với chính mình; false = chưa bấm link xác minh trong email
+  role?: 'user' | 'admin'; // chỉ có với chính mình; 'admin' = quản trị hệ thống
 }
 
 export interface Post {
@@ -210,4 +211,123 @@ export interface SearchResults {
   groups: { group: Group; reasons: string[] }[];
   pages: { page: Page; reasons: string[] }[];
   posts: { post: Post; reasons: string[] }[];
+}
+
+// ----- Quản trị hệ thống (/admin) -----
+export interface AdminPerson {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+}
+
+export interface AdminStats {
+  users: number;
+  online: number;
+  banned: number;
+  admins: number;
+  newToday: number;
+  posts: number;
+  reels: number;
+  comments: number;
+  groups: number;
+  pages: number;
+  pendingReports: number;
+}
+
+export interface AdminUser extends AdminPerson {
+  email: string;
+  role: 'user' | 'admin';
+  banned: boolean;
+  banReason?: string;
+  bannedAt?: string;
+  isOnline: boolean;
+  joinDate?: string;
+}
+
+export interface AdminPost {
+  id: string;
+  kind: 'post' | 'reel' | 'group' | 'page';
+  content: string;
+  mediaCount: number;
+  author: AdminPerson | null;
+  groupName?: string;
+  pageName?: string;
+  privacy: Privacy;
+  groupStatus?: 'approved' | 'pending';
+  commentsCount: number;
+  reactionsCount: number;
+  createdAt: string;
+}
+
+export interface AdminComment {
+  id: string;
+  content: string;
+  author: AdminPerson | null;
+  postId: string;
+  postExcerpt: string;
+  isReply: boolean;
+  likesCount: number;
+  createdAt: string;
+}
+
+export interface AdminGroup {
+  id: string;
+  name: string;
+  description: string;
+  privacy: 'public' | 'private';
+  avatar?: string;
+  owner: AdminPerson | null;
+  membersCount: number;
+  postsCount: number;
+  createdAt: string;
+}
+
+export interface AdminPage {
+  id: string;
+  name: string;
+  category: PageCategory;
+  avatar?: string;
+  owner: AdminPerson | null;
+  followersCount: number;
+  postsCount: number;
+  createdAt: string;
+}
+
+export type ReportTarget = 'post' | 'comment' | 'user' | 'group' | 'page';
+export type ReportReason = 'spam' | 'harassment' | 'hate' | 'violence' | 'nudity' | 'fake' | 'other';
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
+
+export interface AdminReport {
+  id: string;
+  reporter: AdminPerson | null;
+  targetType: ReportTarget;
+  targetId: string;
+  targetName: string;
+  reason: ReportReason;
+  description: string;
+  status: ReportStatus;
+  resolutionNote?: string;
+  handledBy: AdminPerson | null;
+  handledAt?: string;
+  createdAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'alert';
+  createdBy: AdminPerson | null;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  admin: AdminPerson | null;
+  action: string;
+  targetType: string;
+  targetId?: string;
+  details?: Record<string, unknown>;
+  createdAt: string;
 }

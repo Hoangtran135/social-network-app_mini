@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Heart, MessageCircle, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { Eye, Flag, Heart, MessageCircle, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { useConfirm } from '../../context/ConfirmDialogContext';
@@ -9,6 +9,7 @@ import { formatCount } from '../../utils/format';
 import { CommentSection } from '../post/CommentSection';
 import { PostContent } from '../post/PostContent';
 import { AvatarFrame } from '../ui';
+import { ReportButton } from '../SystemReport';
 
 // MỘT reel trong trang Reels: video tự phát khi nằm trong khung nhìn (≥ 70%) và dừng khi rời đi; xem đủ ~1 giây thì tính 1 lượt xem.
 // Có nút thích, bình luận (ngăn kéo), số lượt xem, bật / tắt tiếng và xoá (chỉ reel của mình).
@@ -106,6 +107,11 @@ export const ReelItem: React.FC<{ reel: Post; muted: boolean; onToggleMute: () =
         <button onClick={onToggleMute} aria-label={muted ? 'Bật tiếng' : 'Tắt tiếng'} className="size-11 rounded-full bg-black/40 flex items-center justify-center">
           {muted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
         </button>
+        {!isOwner && (
+          <ReportButton targetType="post" targetId={reel.id} label="Báo cáo reel" className="size-11 rounded-full bg-black/40 flex items-center justify-center">
+            <Flag className="w-6 h-6" />
+          </ReportButton>
+        )}
         {isOwner && (
           <button
             onClick={async () => {

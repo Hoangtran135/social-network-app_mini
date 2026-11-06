@@ -3,6 +3,8 @@
 // Cách dùng: const { posts } = await api.get<{ posts: Post[] }>('/posts');
 
 const TOKEN_KEY = 'authToken';
+/** Sự kiện phát ra khi server báo phiên đăng nhập không còn dùng được (401). */
+export const SESSION_ENDED_EVENT = 'auth:session-ended';
 
 // Token được lưu trong localStorage để tải lại trang vẫn còn đăng nhập
 let token: string | null = localStorage.getItem(TOKEN_KEY);
@@ -16,7 +18,7 @@ export function setToken(newToken: string | null) {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code?: string) {
     super(message);
   }
 }
@@ -33,9 +35,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // 401 = token hết hạn / không hợp lệ → xoá token, người dùng phải đăng nhập lại
-    if (res.status === 401) setToken(null);
-    throw new ApiError(res.status, data.error || 'Đã có lỗi xảy ra.');
+    // 401 = token hết hạn / không hợp lệ / tài khoản bị khoá → xoá token và báo cho AuthContext đưa người dùng về trang đăng nhập
+    if (res.status === 401) {
+      setToken(null);
+      window.dispatchEvent(new Event(SESSION_ENDED_EVENT));
+    }
+    throw new ApiError(res.status, data.error || 'Đã có lỗi xảy ra.', data.code);
   }
   return data as T;
 }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FileText, Info, Settings, Globe, MapPin, Tag, Users } from 'lucide-react';
+import { FileText, Info, Settings, Globe, MapPin, Tag, Users, Flag } from 'lucide-react';
+import { ReportButton } from '../components/SystemReport';
 import { api, ApiError } from '../utils/api';
 import { Page } from '../types';
 import { useSocial } from '../context/SocialContext';
@@ -118,6 +119,11 @@ export const PagePage: React.FC = () => {
               {page.myRole && <span className="ml-2 font-semibold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">{page.myRole === 'owner' ? 'Chủ trang' : 'Quản trị viên'}</span>}
             </p>
           </div>
+          {page.myRole !== 'owner' && (
+            <ReportButton targetType="page" targetId={page.id} label="Báo cáo trang" className="icon-btn">
+              <Flag className="w-4 h-4" />
+            </ReportButton>
+          )}
           <button onClick={toggleFollow} disabled={busy} aria-pressed={page.isFollowing} className={`${page.isFollowing ? 'btn-secondary' : 'btn-primary'} btn-stable shrink-0`}>
             {page.isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
           </button>

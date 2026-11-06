@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
-import { api, getToken, setToken } from '../utils/api';
+import { api, ApiError, getToken, setToken, SESSION_ENDED_EVENT } from '../utils/api';
 import { disconnectSocket } from '../utils/socket';
 
 // Quản lý ĐĂNG NHẬP cho toàn ứng dụng: người đang đăng nhập (currentUser), đăng nhập, đăng ký, đăng xuất,
@@ -21,15 +21,25 @@ function useAuthState() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  /** Đăng nhập / đăng ký thành công → lưu token và người dùng. Trả về true / false. */
-  const signIn = async (path: '/auth/login' | '/auth/register', body: object) => {
+  // Phiên bị server chấm dứt (token hết hạn, tài khoản bị khoá...) → coi như đã đăng xuất; RequireLogin sẽ chuyển về /login
+  useEffect(() => {
+    const onSessionEnded = () => {
+      setCurrentUser(null);
+      disconnectSocket();
+    };
+    window.addEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+  }, []);
+
+  /** Đăng nhập / đăng ký thành công → lưu token và người dùng, trả về true; thất bại → trả về lỗi để nơi gọi quyết định hiện gì. */
+  const signIn = async (path: '/auth/login' | '/auth/register', body: object): Promise<true | ApiError> => {
     try {
       const { token, user } = await api.post<{ token: string; user: User }>(path, body);
       setToken(token);
       setCurrentUser(user);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      return error as ApiError;
     }
   };
 
@@ -39,9 +49,12 @@ function useAuthState() {
   return {
     currentUser,
     isLoading,
-    login: (email: string, password: string) => signIn('/auth/login', { email, password }),
-    register: (name: string, username: string, email: string, password: string) =>
-      signIn('/auth/register', { name, username, email, password }),
+    /** true = đã đăng nhập; chuỗi = tài khoản bị khoá (lời nhắn của server); false = sai email / mật khẩu hoặc lỗi khác. */
+    login: async (email: string, password: string) => {
+      const result = await signIn('/auth/login', { email, password });
+      return result === true ? true : result.code === 'banned' ? result.message : false;
+    },
+    register: async (name: string, username: string, email: string, password: string) => (await signIn('/auth/register', { name, username, email, password })) === true,
     logout: () => {
       api.post('/auth/logout').catch(() => {});
       setToken(null);

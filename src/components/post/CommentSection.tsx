@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Image as ImageIcon, Trash2, Loader2, UserPlus, Send } from 'lucide-react';
+import { ReportButton } from '../SystemReport';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { useConfirm } from '../../context/ConfirmDialogContext';
@@ -246,6 +247,11 @@ const CommentItem: React.FC<{ comment: Comment; postId: string; canReply?: boole
             >
               Sửa
             </button>
+          )}
+          {!isMine && (
+            <ReportButton targetType="comment" targetId={c.id} label="Báo cáo bình luận" className="hover:underline">
+              Báo cáo
+            </ReportButton>
           )}
           {isMine && (
             <button onClick={async () => (await confirm('Xóa bình luận này?')) && deleteComment(postId, c.id)} className="text-rose-500 hover:underline">

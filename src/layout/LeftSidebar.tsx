@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, UsersRound, Flag, Clapperboard, Settings, Bell, Bookmark, UserCircle, Clock, Image as ImageIcon } from 'lucide-react';
+import { Home, Users, UsersRound, Flag, Clapperboard, Settings, Bell, Bookmark, UserCircle, Clock, Image as ImageIcon, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../context/SocialContext';
 import { CountBadge } from '../components/ui';
@@ -29,6 +29,7 @@ export const LeftSidebar: React.FC = () => {
       { label: 'Ảnh của tôi', path: `${myProfile}?tab=photos`, icon: ImageIcon },
       { label: 'Đã lưu', path: '/saved', icon: Bookmark },
       { label: 'Cài đặt tài khoản', path: '/settings', icon: Settings },
+      ...(currentUser?.role === 'admin' ? [{ label: 'Quản trị hệ thống', path: '/admin', icon: ShieldCheck }] : []),
     ],
   ];
 

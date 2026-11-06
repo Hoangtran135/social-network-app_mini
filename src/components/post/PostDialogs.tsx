@@ -2,30 +2,10 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Post, User } from '../../types';
 import { timeAgo } from '../../utils/format';
+import { DialogShell } from '../ui';
 
 // Các hộp thoại của thẻ bài viết (PostCard): gửi cho bạn bè, chia sẻ kèm lời bình, báo cáo (bài trong nhóm), lịch sử chỉnh sửa, xem ảnh lớn.
 // Mỗi hộp thoại tự giữ ô nhập của nó; PostCard chỉ quyết định khi nào mở / đóng và làm gì khi người dùng xác nhận.
-
-/** Khung chung: nền mờ (bấm ra ngoài để đóng) + thẻ trắng có tiêu đề và nút đóng. */
-const DialogShell: React.FC<{ label: string; title: string; onClose: () => void; size?: 'sm' | 'md'; scroll?: boolean; children: React.ReactNode }> = ({ label, title, onClose, size = 'md', scroll = false, children }) => (
-  <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={onClose}>
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={label}
-      className={`animate-pop bg-white rounded-2xl w-full p-5 ${size === 'sm' ? 'max-w-sm' : 'max-w-md'} ${scroll ? 'max-h-[80dvh] flex flex-col' : ''}`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="section-title">{title}</h3>
-        <button onClick={onClose} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      {children}
-    </div>
-  </div>
-);
 
 /** Chọn một người bạn để gửi bài viết qua tin nhắn. */
 export const SendToFriendDialog: React.FC<{ friends: User[]; onPick: (friendId: string) => void; onClose: () => void }> = ({ friends, onPick, onClose }) => (

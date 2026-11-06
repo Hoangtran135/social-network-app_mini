@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, UsersRound, Flag, Clapperboard, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, Moon, Sun, LucideIcon } from 'lucide-react';
+import { Home, Users, UsersRound, Flag, Clapperboard, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, Moon, Sun, ShieldCheck, LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSocial } from '../context/SocialContext';
@@ -11,6 +11,7 @@ import { ChatListDropdown } from '../components/chat/ChatListDropdown';
 import { CountBadge } from '../components/ui';
 import { DROPDOWN } from './dropdown';
 import { SearchBox } from './SearchBox';
+import { NotificationAvatar, NotificationText } from '../components/NotificationParts';
 import { timeAgo } from '../utils/format';
 
 // Thanh điều hướng trên cùng: logo, nút Trang chủ / Bạn bè, nút Đăng bài,
@@ -112,10 +113,10 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
                     }}
                     className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 text-xs ${n.isRead ? '' : 'bg-blue-50/50'}`}
                   >
-                    <img src={n.actor.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                    <NotificationAvatar n={n} className="w-10 h-10 rounded-full shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-slate-800 break-words">
-                        <b>{n.actor.name}</b> {n.content}
+                        <NotificationText n={n} />
                       </p>
                       <span className={`text-[11px] ${n.isRead ? 'text-slate-400' : 'text-blue-600 font-semibold'}`}>{timeAgo(n.createdAt)}</span>
                     </div>
@@ -155,6 +156,11 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
                 <Link to="/memories" className={`${MENU_ITEM} text-slate-700 lg:hidden`}>
                   <Clock className="w-4 h-4 text-slate-400" /> Kỷ niệm
                 </Link>
+                {currentUser?.role === 'admin' && (
+                  <Link to="/admin" className={`${MENU_ITEM} text-blue-600`}>
+                    <ShieldCheck className="w-4 h-4" /> Quản trị hệ thống
+                  </Link>
+                )}
                 <Link to="/settings" className={`${MENU_ITEM} text-slate-700`}>
                   <Settings className="w-4 h-4 text-slate-400" /> Cài đặt tài khoản
                 </Link>
