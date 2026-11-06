@@ -94,7 +94,7 @@ export function registerGroupCore(router: Router) {
       status: 'pending',
       answers: questions.map((question, i) => ({ question, answer: answers[i] })),
     });
-    await notifyAdmins(group, me, `đã xin tham gia nhóm "${group.name}".`);
+    await notifyAdmins(group, me, `đã xin tham gia nhóm "${group.name}".`, 'join-requests');
     res.json({ group: groupToJson(group, pending) });
   });
 

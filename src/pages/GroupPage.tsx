@@ -122,7 +122,9 @@ export const GroupPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorText, setErrorText] = useState('');
   // ?tab=admin (từ thông báo xin vào nhóm / bài chờ duyệt / báo cáo) mở thẳng tab Quản trị
-  const initialTab: Tab = useSearchParams()[0].get('tab') === 'admin' ? 'admin' : 'posts';
+  const [searchParams] = useSearchParams();
+  const initialTab: Tab = searchParams.get('tab') === 'admin' ? 'admin' : 'posts';
+  const focusSection = searchParams.get('focus'); // join-requests | pending-posts | reports: mục cần cuộn tới trong tab Quản trị
   const [tab, setTab] = useState<Tab>(initialTab);
   const [joining, setJoining] = useState(false); // hộp thoại trả lời câu hỏi
 
@@ -142,6 +144,16 @@ export const GroupPage: React.FC = () => {
   }, [load, initialTab]);
 
   const { act, busy } = useManageAction(load);
+
+  // Từ thông báo: tab Quản trị hiện ra thì cuộn tới đúng mục và viền sáng 2 giây
+  useEffect(() => {
+    if (status !== 'ready' || tab !== 'admin' || !focusSection) return;
+    const el = document.getElementById(`group-${focusSection}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el?.classList.add('ring-2', 'ring-blue-500');
+    const timer = setTimeout(() => el?.classList.remove('ring-2', 'ring-blue-500'), 2000);
+    return () => clearTimeout(timer);
+  }, [status, tab, focusSection]);
 
   if (status === 'loading') return <PageLoading text="Đang tải nhóm..." />;
   if (status === 'error' || !group) return <ErrorState title={errorText || 'Không tải được nhóm'} description="Nhóm có thể đã bị xoá hoặc bạn không có quyền xem." onRetry={load} />;

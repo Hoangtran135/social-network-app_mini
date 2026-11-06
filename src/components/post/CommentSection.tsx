@@ -38,17 +38,21 @@ export const CommentSection: React.FC<{ postId: string; disabled?: boolean; focu
 
   const all = comments[postId] || [];
 
-  // Từ thông báo: bình luận tải về xong thì cuộn tới và viền sáng 2 giây (chỉ một lần)
+  // Từ thông báo: bình luận tải về xong thì cuộn tới (cuộn lại sau 0,4 giây vì ảnh tải xong có thể làm trang xê dịch) và tô sáng 3 giây
   const focused = useRef(false);
   const hasFocusTarget = !!focusCommentId && all.some((c) => c.id === focusCommentId);
   useEffect(() => {
     if (!hasFocusTarget || focused.current) return;
     focused.current = true;
     const el = document.getElementById(`comment-${focusCommentId}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el?.classList.add('ring-2', 'ring-blue-500', 'rounded-2xl');
-    setTimeout(() => el?.classList.remove('ring-2', 'ring-blue-500', 'rounded-2xl'), 2000);
+    const scroll = () => el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const mark = ['bg-blue-50', 'ring-2', 'ring-blue-500', 'rounded-2xl', 'p-1'];
+    scroll();
+    setTimeout(scroll, 400);
+    el?.classList.add(...mark);
+    setTimeout(() => el?.classList.remove(...mark), 3000);
   }, [hasFocusTarget, focusCommentId]);
+
   const [sort, setSort] = useState<'oldest' | 'newest' | 'top'>('oldest');
   const byTime = (a: Comment, b: Comment) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   const sorters = { oldest: byTime, newest: (a: Comment, b: Comment) => byTime(b, a), top: (a: Comment, b: Comment) => reactionsOf(b).length - reactionsOf(a).length || byTime(a, b) };

@@ -145,7 +145,7 @@ postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
   if (!reapproval) return void emitPostToViewers(post, 'post:update');
   // Bài quay lại chờ duyệt: thành viên khác phải bỏ bản đã duyệt cũ; chỉ quản trị viên được báo và thấy bản chờ duyệt
   const groupId = getId(post.group);
-  await notifyAdmins(reapproval.group, req.userId, `đã sửa một bài viết đã duyệt trong nhóm "${reapproval.group.name}", bài đang chờ duyệt lại.`);
+  await notifyAdmins(reapproval.group, req.userId, `đã sửa một bài viết đã duyệt trong nhóm "${reapproval.group.name}", bài đang chờ duyệt lại.`, 'pending-posts');
   await emitToGroupMembers(groupId, 'post:delete', { postId: post.id }, { exclude: req.userId });
   await emitToGroupMembers(groupId, 'post:new', { post: postToJson(post) }, { exclude: req.userId, adminsOnly: true, hideFromBlockedBy: req.userId });
 });

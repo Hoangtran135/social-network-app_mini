@@ -50,7 +50,7 @@ export function registerGroupPosts(router: Router) {
     await post.populate(POPULATE);
 
     if (needsApproval) {
-      await notifyAdmins(group, me, `có bài viết đang chờ duyệt trong nhóm "${group.name}".`);
+      await notifyAdmins(group, me, `có bài viết đang chờ duyệt trong nhóm "${group.name}".`, 'pending-posts');
       await emitToGroupMembers(group.id, 'post:new', { post: postToJson(post) }, { exclude: me, adminsOnly: true, hideFromBlockedBy: me });
     } else {
       await emitToGroupMembers(group.id, 'post:new', { post: postToJson(post) }, { exclude: me, hideFromBlockedBy: me });

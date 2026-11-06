@@ -141,7 +141,7 @@ export interface NotificationItem {
   content: string;
   targetId?: string;
   commentId?: string; // thông báo về bình luận: bình luận cần cuộn tới
-  focus?: 'admin'; // mở sẵn mục này ở nơi đích (tab Quản trị của nhóm)
+  focus?: 'join-requests' | 'pending-posts' | 'reports'; // mục cần cuộn tới ở tab Quản trị của nhóm
   targetType?: 'post' | 'profile' | 'group' | 'page' | 'system';
   isRead: boolean;
   createdAt: string;

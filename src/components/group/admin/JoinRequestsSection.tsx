@@ -26,7 +26,7 @@ export const JoinRequests: React.FC<{ group: Group; reload: () => void }> = ({ g
   });
 
   return (
-    <AdminSection icon={UserPlus} title="Yêu cầu tham gia" count={requests?.length ?? group.pendingMembersCount ?? 0}>
+    <AdminSection id="group-join-requests" icon={UserPlus} title="Yêu cầu tham gia" count={requests?.length ?? group.pendingMembersCount ?? 0}>
       {requests?.length === 0 && <MutedText>Không có yêu cầu nào đang chờ.</MutedText>}
       <ul className="divide-y divide-slate-100">
         {requests?.map((r) => (

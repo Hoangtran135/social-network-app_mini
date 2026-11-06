@@ -227,8 +227,8 @@ export const SquareAvatar: React.FC<{ item: { name: string; avatar?: string }; s
   );
 
 /** Khung một mục trong tab quản trị (nhóm / trang): thẻ có icon + tiêu đề + huy hiệu đếm số việc đang chờ. */
-export const AdminSection: React.FC<{ icon: LucideIcon; title: string; count?: number; children: React.ReactNode }> = ({ icon: Icon, title, count = 0, children }) => (
-  <section className="card p-4 sm:p-5">
+export const AdminSection: React.FC<{ id?: string; icon: LucideIcon; title: string; count?: number; children: React.ReactNode }> = ({ id, icon: Icon, title, count = 0, children }) => (
+  <section id={id} className="card p-4 sm:p-5 scroll-mt-24">
     <h3 className="section-title flex items-center gap-2 mb-3">
       <Icon className="w-4 h-4 text-slate-400" /> {title} <CountBadge count={count} />
     </h3>

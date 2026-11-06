@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useSocial } from '../context/SocialContext';
 import { useOpenNotification } from '../hooks/useOpenNotification';
+import { useChatWindows } from '../context/ChatWindowsContext';
 
 // Thông báo nhỏ hiện vài giây ở góc màn hình (vd "Đã đăng bài viết!").
 // Nội dung lấy từ SocialContext; ở bất kỳ đâu gọi showToast('...') là hiện.
@@ -16,6 +17,7 @@ const STYLES = {
 export const Toast: React.FC = () => {
   const { toast, dismissToast } = useSocial();
   const openNotification = useOpenNotification();
+  const { openChat } = useChatWindows();
   if (!toast) return null;
   const { color, Icon } = STYLES[toast.type];
 
@@ -23,11 +25,12 @@ export const Toast: React.FC = () => {
     <div role={toast.type === 'error' ? 'alert' : 'status'} className="fixed bottom-20 sm:bottom-6 right-4 left-4 sm:right-auto sm:left-6 z-[70] pointer-events-none">
       <div className={`animate-pop flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium sm:max-w-sm ${color}`}>
         <Icon className="w-5 h-5 shrink-0" />
-        {toast.notification ? (
-          // Toast của một thông báo: bấm vào là mở đúng nội dung (bài viết, hồ sơ, nhóm...) rồi tắt toast
+        {toast.notification || toast.conversationId ? (
+          // Toast của thông báo / tin nhắn mới: bấm vào là mở đúng nội dung (bài viết, bình luận, nhóm, cửa sổ chat...) rồi tắt toast
           <button
             onClick={() => {
-              openNotification(toast.notification!);
+              if (toast.notification) openNotification(toast.notification);
+              else openChat(toast.conversationId!);
               dismissToast();
             }}
             className="pointer-events-auto min-w-0 flex-1 text-left break-words hover:underline"

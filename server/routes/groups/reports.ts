@@ -17,7 +17,7 @@ export function registerGroupReports(router: Router) {
     if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
     if (getId(post.author) === req.userId) return res.status(400).json({ error: 'Bạn không thể báo cáo bài viết của chính mình.' });
     await GroupReportModel.create({ group: group._id, post: post._id, reporter: req.userId, reason: req.body.reason }); // báo cáo trùng → lỗi khoá duy nhất → 409
-    await notifyAdmins(group, req.userId, `đã báo cáo một bài viết trong nhóm "${group.name}".`);
+    await notifyAdmins(group, req.userId, `đã báo cáo một bài viết trong nhóm "${group.name}".`, 'reports');
     res.json({ ok: true });
   });
 

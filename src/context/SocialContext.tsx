@@ -40,15 +40,15 @@ function useSocialState() {
   conversationsRef.current = conversations;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: { label: string; onClick: () => void }; notification?: NotificationItem } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: { label: string; onClick: () => void }; notification?: NotificationItem; conversationId?: string } | null>(null);
   const [tagPosts, setTagPosts] = useState<Post[]>([]); // bài của trang #hashtag đang mở
 
   // ---------- Hàm tiện ích dùng chung ----------
 
-  /** action = nút trên toast (vd "Hoàn tác"); notification = toast của một thông báo, bấm vào là mở đúng nội dung. Toast bấm được hiện lâu hơn để kịp bấm. */
-  const showToast = (message: string, type: ToastType = 'success', action?: { label: string; onClick: () => void }, notification?: NotificationItem) => {
-    setToast({ message, type, action, notification });
-    setTimeout(() => setToast(null), action || notification ? 6000 : 3500);
+  /** action = nút trên toast (vd "Hoàn tác"); target = toast bấm được: thông báo (mở đúng nội dung) hoặc tin nhắn mới (mở cửa sổ chat). Toast bấm được hiện lâu hơn để kịp bấm. */
+  const showToast = (message: string, type: ToastType = 'success', action?: { label: string; onClick: () => void }, target?: { notification?: NotificationItem; conversationId?: string }) => {
+    setToast({ message, type, action, ...target });
+    setTimeout(() => setToast(null), action || target ? 6000 : 3500);
   };
 
   /** Chạy một thao tác; lỗi thì hiện toast đỏ (ưu tiên câu báo lỗi của server). Trả về kết quả, hoặc undefined nếu lỗi. */
@@ -187,7 +187,7 @@ function useSocialState() {
               : c
           )
         );
-        if (fromOther && !message.isRecalled) showToast(`${message.senderName}: ${message.content || 'Đã gửi một tệp đính kèm'}`, 'info');
+        if (fromOther && !message.isRecalled) showToast(`${message.senderName}: ${message.content || 'Đã gửi một tệp đính kèm'}`, 'info', undefined, { conversationId });
       },
       // Người khác bắt đầu / ngừng gõ trong hội thoại (tự tắt sau 5 giây nếu không có tín hiệu mới)
       typing: ({ conversationId, userId, isTyping }: { conversationId: string; userId: string; isTyping: boolean }) => {
@@ -211,7 +211,7 @@ function useSocialState() {
         ),
       'notification:new': (notif: NotificationItem) => {
         setNotifications((list) => [notif, ...list]);
-        showToast(notificationPlain(notif), 'info', undefined, notif);
+        showToast(notificationPlain(notif), 'info', undefined, { notification: notif });
         if (notif.type === 'friend_accept') {
           setSentFriendRequests((list) => list.filter((r) => r.receiverId !== notif.actor.id));
           setFriends((list) => [notif.actor, ...list.filter((f) => f.id !== notif.actor.id)]);

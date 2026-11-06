@@ -10,7 +10,7 @@ const notificationSchema = new Schema(
     content: { type: String, required: true },
     targetId: String,
     targetType: { type: String, enum: ['post', 'profile', 'group', 'page', 'system'] },
-    // Bấm thông báo thì mở ĐÚNG chỗ: commentId = bình luận cần cuộn tới; focus = mục cần mở (vd 'admin' = tab Quản trị của nhóm)
+    // Bấm thông báo thì mở ĐÚNG chỗ: commentId = bình luận cần cuộn tới; focus = mục cần cuộn tới ở tab Quản trị của nhóm ('join-requests' | 'pending-posts' | 'reports')
     commentId: String,
     focus: String,
     isRead: { type: Boolean, default: false },

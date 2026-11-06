@@ -23,7 +23,7 @@ export const PendingPosts: React.FC<{ group: Group; reload: () => void }> = ({ g
   };
 
   return (
-    <AdminSection icon={FileClock} title="Bài viết chờ duyệt" count={pending.length}>
+    <AdminSection id="group-pending-posts" icon={FileClock} title="Bài viết chờ duyệt" count={pending.length}>
       {pending.length === 0 && <MutedText>Không có bài viết nào đang chờ duyệt.</MutedText>}
       <ul className="space-y-3">
         {pending.map((p) => (

@@ -27,7 +27,7 @@ export const Reports: React.FC<{ group: Group; reload: () => void }> = ({ group,
   });
 
   return (
-    <AdminSection icon={Flag} title="Báo cáo từ thành viên" count={reports?.length ?? group.openReportsCount ?? 0}>
+    <AdminSection id="group-reports" icon={Flag} title="Báo cáo từ thành viên" count={reports?.length ?? group.openReportsCount ?? 0}>
       {reports?.length === 0 && <MutedText>Không có báo cáo nào cần xử lý.</MutedText>}
       <ul className="space-y-3">
         {reports?.map((r) => (
