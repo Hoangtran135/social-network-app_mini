@@ -5,7 +5,12 @@ import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
 import { validate, createPostSchema, updatePostSchema, reactPostSchema, sharePostSchema } from '../validation';
 import { postToJson, getId, Doc } from '../formatResponse';
-import { getFriendAndBlockedIds, getFriendIds, isBlockedBetween, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
+import { getFriendAndBlockedIds, getFriendIds, isBlockedBetween, emitToAllowedViewers, visibleToViewerFilter } from '../privacyRules';
+import { canViewPost, canInteractPost, emitToGroupMembers, getMembership, isActiveMember } from '../groupRules';
+import { notifyAdmins } from './groups/middleware';
+import { GroupModel } from '../models/Group';
+import { CommentModel } from '../models/Comment';
+import { GroupReportModel } from '../models/GroupReport';
 import { UserModel } from '../models/User';
 import { pageParams } from '../pagination';
 import { extractHashtags, normalizeTag } from '../hashtags';
@@ -17,38 +22,44 @@ import { extractHashtags, normalizeTag } from '../hashtags';
 export const postsRouter = Router();
 postsRouter.use(requireAuth);
 
-// Các trường cần "populate" (thay id bằng thông tin đầy đủ) mỗi khi trả bài viết về client
-const POPULATE = ['author', 'wallOwner', 'reactions.userId', 'savedBy', 'taggedUsers'];
+// Các trường cần "populate" (thay id bằng thông tin đầy đủ) mỗi khi trả bài viết về client (bài nhóm kèm tên nhóm)
+export const POPULATE = [{ path: 'author' }, { path: 'wallOwner' }, { path: 'reactions.userId' }, { path: 'savedBy' }, { path: 'taggedUsers' }, { path: 'group', select: 'name' }, { path: 'page', select: 'name avatar' }];
 
-/** Gửi bài viết realtime tới người được xem */
+const GROUP_POST_ERROR = 'Bài viết trong nhóm chỉ thao tác được trong trang nhóm.';
+
+/** Gửi bài viết realtime tới người được xem (bài nhóm: chỉ thành viên nhóm; bài chờ duyệt: chỉ quản trị viên) */
 const emitPostToViewers = (post: Doc, event: 'post:new' | 'post:update') =>
-  emitToAllowedViewers(post.privacy, getId(post.author), event, { post: postToJson(post) });
+  post.group
+    ? emitToGroupMembers(getId(post.group), event, { post: postToJson(post) }, { exclude: getId(post.author), adminsOnly: post.groupStatus === 'pending', hideFromBlockedBy: getId(post.author) })
+    : emitToAllowedViewers(post.privacy, getId(post.author), event, { post: postToJson(post) });
 
 /** Lấy bài viết nếu được xem */
 async function findPostIfVisible(id: string, userId: string) {
   const post = await PostModel.findById(id).populate(POPULATE);
-  return post && (await canView(getId(post.author), userId, post.privacy)) ? post : null;
+  return post && (await canViewPost(post, userId)) ? post : null;
 }
 
 /** Lấy bảng tin. ?tag=<hashtag> chỉ lấy bài có hashtag đó. Bài mình đã ẩn không hiện. */
 postsRouter.get('/', async (req, res) => {
   const { limit, skip } = pageParams(req.query, 30);
-  const filter: Record<string, unknown> = { hiddenBy: { $ne: req.userId } };
+  const me = req.userId;
+  const { friendIds, blockedIds } = await getFriendAndBlockedIds(me);
+  // Lọc quyền xem ngay trong truy vấn (không phải sau khi đã cắt trang) → mỗi trang đủ `limit` bài, phân trang đúng:
+  // bài của mình, bài công khai, bài "bạn bè" của bạn bè; bỏ bài của người bị chặn. Bài nhóm chỉ xem ở trang nhóm; reel chỉ ở mục Reels.
+  const filter: Record<string, unknown> = { hiddenBy: { $ne: me }, group: null, kind: { $ne: 'reel' }, ...visibleToViewerFilter(me, friendIds, blockedIds) };
   if (req.query.tag !== undefined) {
     const tag = normalizeTag(req.query.tag);
     if (!tag) return res.json({ posts: [] }); // tag rác → không có bài nào (không lỗi, không trả toàn bộ bảng tin)
     filter.hashtags = tag;
   }
   const posts = await PostModel.find(filter).sort({ createdAt: -1 }).limit(limit).skip(skip).populate(POPULATE);
-  const { friendIds, blockedIds } = await getFriendAndBlockedIds(req.userId);
-  const visible = posts.filter((p: Doc) => canViewContent(getId(p.author), req.userId, p.privacy, friendIds, blockedIds));
-  res.json({ posts: visible.map((p: Doc) => postToJson(p, req.userId)) });
+  res.json({ posts: posts.map((p: Doc) => postToJson(p, me)) });
 });
 
 /** Lấy kỷ niệm (phải đặt trước '/:id') */
 postsRouter.get('/memories', async (req, res) => {
   const now = new Date();
-  const posts = await PostModel.find({ author: req.userId, createdAt: { $lt: new Date(now.getFullYear(), 0, 1) } })
+  const posts = await PostModel.find({ author: req.userId, group: null, kind: { $ne: 'reel' }, createdAt: { $lt: new Date(now.getFullYear(), 0, 1) } })
     .sort({ createdAt: -1 })
     .populate(POPULATE);
   const memories = posts.filter((p: Doc) => p.createdAt.getDate() === now.getDate() && p.createdAt.getMonth() === now.getMonth());
@@ -87,11 +98,38 @@ postsRouter.post('/', validate(createPostSchema), async (req, res) => {
   emitPostToViewers(post, 'post:new');
 });
 
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+/** Nội dung / ảnh / video của bài có bị đổi bởi bản sửa này không. */
+const changesContent = (post: Doc, body: Record<string, unknown>) =>
+  (body.content !== undefined && body.content !== post.content) || (body.images !== undefined && !sameJson([...post.images], body.images)) || (body.video !== undefined && body.video !== post.video);
+
+/**
+ * Luật sửa bài NHÓM: tác giả phải còn là thành viên; nhóm bật duyệt bài thì thành viên thường sửa nội dung / ảnh / video của bài đã duyệt
+ * sẽ đưa bài quay lại "chờ duyệt" (tránh duyệt bài lành rồi đổi sang nội dung vi phạm). Trả về lỗi, hoặc nhóm + cờ cần duyệt lại.
+ */
+async function checkGroupPostEdit(post: Doc, userId: string, body: Record<string, unknown>) {
+  const membership = await getMembership(getId(post.group), userId);
+  if (!isActiveMember(membership)) return { error: 'Bạn không còn là thành viên của nhóm này nên không thể sửa bài viết.' } as const;
+  const group = await GroupModel.findById(post.group);
+  const needsReapproval = !!group?.postApproval && membership?.role === 'member' && post.groupStatus === 'approved' && changesContent(post, body);
+  return { group, needsReapproval } as const;
+}
+
 /** Sửa bài viết */
 postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
   const post = await PostModel.findById(req.params.id);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   if (post.author.toString() !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền sửa bài viết này.' });
+
+  // Quyền riêng tư của bài nhóm (luôn 'only_me') và bài của trang (luôn 'public') do hệ thống quản, tác giả không được đổi
+  if (post.group || post.page) delete req.body.privacy;
+
+  let reapproval: { group: Doc } | null = null;
+  if (post.group) {
+    const check = await checkGroupPostEdit(post, req.userId, req.body);
+    if ('error' in check) return res.status(403).json({ error: check.error });
+    if (check.needsReapproval) reapproval = { group: check.group };
+  }
 
   // Nội dung đổi thì lưu phiên bản cũ vào lịch sử (tối đa 20 phiên bản gần nhất) và tính lại hashtag
   if (req.body.content !== undefined && req.body.content !== post.content) {
@@ -99,10 +137,17 @@ postsRouter.patch('/:id', validate(updatePostSchema), async (req, res) => {
     post.hashtags = extractHashtags(req.body.content);
   }
   Object.assign(post, req.body, { editedAt: new Date() });
+  if (reapproval) post.groupStatus = 'pending';
   await post.save();
   await post.populate(POPULATE);
   res.json({ post: postToJson(post, req.userId) });
-  emitPostToViewers(post, 'post:update'); 
+
+  if (!reapproval) return void emitPostToViewers(post, 'post:update');
+  // Bài quay lại chờ duyệt: thành viên khác phải bỏ bản đã duyệt cũ; chỉ quản trị viên được báo và thấy bản chờ duyệt
+  const groupId = getId(post.group);
+  await notifyAdmins(reapproval.group, req.userId, `đã sửa một bài viết đã duyệt trong nhóm "${reapproval.group.name}", bài đang chờ duyệt lại.`);
+  await emitToGroupMembers(groupId, 'post:delete', { postId: post.id }, { exclude: req.userId });
+  await emitToGroupMembers(groupId, 'post:new', { post: postToJson(post) }, { exclude: req.userId, adminsOnly: true, hideFromBlockedBy: req.userId });
 });
 
 /** Xoá bài viết */
@@ -111,9 +156,13 @@ postsRouter.delete('/:id', async (req, res) => {
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   if (post.author.toString() !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền xóa bài viết này.' });
 
-  await post.deleteOne();
+  // Xoá kèm bình luận của bài (không để lại bình luận mồ côi)
+  await Promise.all([CommentModel.deleteMany({ post: post._id }), post.deleteOne()]);
   res.json({ ok: true });
-  emitToAllowedViewers(post.privacy, req.userId, 'post:delete', { postId: post.id });
+  if (post.group) {
+    await GroupReportModel.deleteMany({ post: post._id });
+    emitToGroupMembers(getId(post.group), 'post:delete', { postId: post.id }, { exclude: req.userId, adminsOnly: post.groupStatus === 'pending' });
+  } else emitToAllowedViewers(post.privacy, req.userId, 'post:delete', { postId: post.id });
 });
 
 /** Thả / đổi / bỏ cảm xúc bài viết */
@@ -122,6 +171,7 @@ postsRouter.delete('/:id', async (req, res) => {
     const me = req.userId;
     const post = await findPostIfVisible(req.params.id, me);
     if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+    if (post.group && !(await canInteractPost(post, me, true))) return res.status(403).json({ error: 'Bạn cần tham gia nhóm để tương tác với bài viết này.' });
 
     const _id = post._id;
     // MỘT cập nhật nguyên tử (pipeline): cùng loại thì bỏ, khác loại thì thay, chưa có thì thêm. Nhiều request song song của cùng một người
@@ -153,6 +203,7 @@ postsRouter.post('/:id/pin', async (req, res) => {
   const post = await PostModel.findById(req.params.id).populate(POPULATE);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   if (getId(post.author) !== req.userId) return res.status(403).json({ error: 'Bạn không có quyền ghim bài viết này.' });
+  if (post.group) return res.status(400).json({ error: GROUP_POST_ERROR });
 
   post.pinned = !post.pinned;
   await post.save();
@@ -192,6 +243,7 @@ postsRouter.delete('/:id/hide', async (req, res) => {
 postsRouter.post('/:id/save', async (req, res) => {
   const post = await findPostIfVisible(req.params.id, req.userId);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (post.group) return res.status(400).json({ error: GROUP_POST_ERROR });
 
   const alreadySaved = post.savedBy.some((u: Doc) => getId(u) === req.userId);
   await PostModel.updateOne({ _id: post._id }, alreadySaved ? { $pull: { savedBy: req.userId } } : { $addToSet: { savedBy: req.userId } });
@@ -203,6 +255,8 @@ postsRouter.post('/:id/save', async (req, res) => {
 postsRouter.post('/:id/share', validate(sharePostSchema), async (req, res) => {
   const original = await findPostIfVisible(req.params.id, req.userId);
   if (!original) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (original.group) return res.status(400).json({ error: GROUP_POST_ERROR });
+  if (original.kind === 'reel') return res.status(400).json({ error: 'Không thể chia sẻ Reel lên trang cá nhân.' });
 
   await PostModel.updateOne({ _id: original._id }, { $inc: { sharesCount: 1 } });
   original.sharesCount = (original.sharesCount || 0) + 1; // để phản hồi / sự kiện realtime hiện số mới

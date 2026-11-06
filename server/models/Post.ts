@@ -38,6 +38,15 @@ const postSchema = new Schema(
     commentsDisabled: { type: Boolean, default: false },
     // Những người đã chọn "Ẩn bài viết / không quan tâm" → bài không hiện ở bảng tin của họ
     hiddenBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // Bài đăng trong nhóm: có giá trị 'group'. Bài nhóm luôn có privacy = 'only_me' để MỌI đường cũ (bảng tin, hashtag, chia sẻ, realtime...) mặc định ĐÓNG;
+    // quyền xem thật sự do thành viên nhóm quyết định (server/groupRules.ts). groupStatus: pending = đang chờ quản trị viên duyệt.
+    group: { type: Schema.Types.ObjectId, ref: 'Group' },
+    groupStatus: { type: String, enum: ['approved', 'pending'], default: 'approved' },
+    // Bài đăng với tư cách một Trang (fanpage): author = quản trị viên đã đăng, page = trang. Luôn công khai.
+    page: { type: Schema.Types.ObjectId, ref: 'Page' },
+    // 'reel' = video ngắn (chỉ hiện ở mục Reels, không lên bảng tin / trang cá nhân); mặc định là bài viết thường
+    kind: { type: String, enum: ['post', 'reel'], default: 'post' },
+    viewsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -46,5 +55,8 @@ postSchema.index({ createdAt: -1 });
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ wallOwner: 1 });
 postSchema.index({ hashtags: 1, createdAt: -1 });
+postSchema.index({ group: 1, groupStatus: 1, createdAt: -1 });
+postSchema.index({ page: 1, createdAt: -1 });
+postSchema.index({ kind: 1, createdAt: -1 });
 
 export const PostModel = mongoose.models.Post || mongoose.model('Post', postSchema);

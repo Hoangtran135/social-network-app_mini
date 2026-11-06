@@ -21,7 +21,7 @@ export function userToJson(u: Doc) {
     id: getId(u), 
     name: u.name,
     username: u.username,
-    email: u.email,
+    // KHÔNG có email: thông tin riêng tư, chỉ trả cho chính chủ (xem meToJson)
     avatar: u.avatar,
     coverImage: u.coverImage,
     bio: u.bio,
@@ -42,7 +42,7 @@ export function userToJson(u: Doc) {
 /** Thông tin của chính mình: như trên + danh sách người mình đã chặn. */
 export function meToJson(u: Doc) {
   const base = userToJson(u);
-  return base && { ...base, blockedUserIds: (u.blockedUsers || []).map(getId), emailVerified: u.emailVerified !== false };
+  return base && { ...base, email: u.email, blockedUserIds: (u.blockedUsers || []).map(getId), emailVerified: u.emailVerified !== false };
 }
 
 /** viewerId: người đang xem, để biết họ đã lưu bài này chưa (isSaved). */
@@ -68,6 +68,16 @@ export function postToJson(p: Doc, viewerId?: string) {
     commentsCount: p.commentsCount || 0,
     sharesCount: p.sharesCount || 0,
     pinned: p.pinned,
+    // Bài trong nhóm: id + tên nhóm (khi đã populate) + trạng thái duyệt
+    groupId: p.group ? getId(p.group) : undefined,
+    groupName: p.group?.name,
+    groupStatus: p.group ? p.groupStatus : undefined,
+    // Bài đăng với tư cách Trang: hiển thị trang thay cho người đăng
+    pageId: p.page ? getId(p.page) : undefined,
+    pageName: p.page?.name,
+    pageAvatar: p.page?.avatar,
+    kind: p.kind === 'reel' ? 'reel' : undefined,
+    viewsCount: p.kind === 'reel' ? p.viewsCount || 0 : undefined,
     isSaved: viewerId ? (p.savedBy || []).some((u: Doc) => getId(u) === viewerId) : false,
   };
 }
@@ -171,5 +181,72 @@ export function messageToJson(m: Doc, participantIds: string[] = []) {
     isRead: participantIds.filter((pid) => pid !== senderId).every((pid) => readBy.has(pid)),
     isRecalled: !!m.isRecalled,
     reactions: m.reactions?.size > 0 ? Object.fromEntries(m.reactions) : undefined,
+  };
+}
+
+/** Nhóm giao lưu + vai trò / trạng thái của người xem (membership). extra: số liệu chỉ dành cho quản trị viên. */
+export function groupToJson(g: Doc, membership?: Doc | null, extra: { pendingMembersCount?: number; pendingPostsCount?: number; openReportsCount?: number } = {}) {
+  const active = membership?.status === 'active';
+  return {
+    id: getId(g),
+    name: g.name,
+    description: g.description || '',
+    rules: g.rules,
+    privacy: g.privacy,
+    avatar: g.avatar,
+    cover: g.cover,
+    ownerId: getId(g.owner),
+    postApproval: !!g.postApproval,
+    joinQuestions: g.joinQuestions,
+    membersCount: g.membersCount,
+    createdAt: g.createdAt,
+    myRole: active ? membership.role : null,
+    myStatus: membership?.status ?? null,
+    ...extra,
+  };
+}
+
+/** Một thành viên nhóm. Câu trả lời xin vào nhóm chỉ trả cho quản trị viên (withAnswers). */
+export function memberToJson(m: Doc, withAnswers = false) {
+  return {
+    user: userToJson(m.user),
+    role: m.role,
+    status: m.status,
+    answers: withAnswers ? m.answers.map((a: Doc) => ({ question: a.question, answer: a.answer })) : undefined,
+    joinedAt: m.createdAt,
+  };
+}
+
+/** Báo cáo bài viết trong nhóm (kèm bài bị báo cáo). */
+export function reportToJson(r: Doc) {
+  return {
+    id: getId(r),
+    reporter: userToJson(r.reporter),
+    reason: r.reason || '',
+    createdAt: r.createdAt,
+    post: postToJson(r.post),
+  };
+}
+
+/** Trang (fanpage) + quan hệ của người xem với trang (myRole: owner / admin / null, isFollowing). */
+export function pageToJson(pg: Doc, viewerId: string, isFollowing = false) {
+  const ownerId = getId(pg.owner);
+  const isAdmin = ownerId === viewerId || pg.admins.some((a: Doc) => getId(a) === viewerId);
+  return {
+    id: getId(pg),
+    name: pg.name,
+    category: pg.category,
+    description: pg.description || '',
+    website: pg.website,
+    address: pg.address,
+    avatar: pg.avatar,
+    cover: pg.cover,
+    ownerId,
+    followersCount: pg.followersCount || 0,
+    createdAt: pg.createdAt,
+    myRole: ownerId === viewerId ? 'owner' : isAdmin ? 'admin' : null,
+    isFollowing,
+    // Chỉ quản trị viên thấy danh sách người quản trị (đã populate)
+    admins: isAdmin ? [pg.owner, ...pg.admins].filter((u: Doc) => u.name).map(userToJson) : undefined,
   };
 }

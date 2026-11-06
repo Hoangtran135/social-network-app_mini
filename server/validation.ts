@@ -1,4 +1,5 @@
 import { z, ZodType } from 'zod';
+import { PAGE_CATEGORIES } from './models/Page';
 import { Request, Response, NextFunction } from 'express';
 
 // Kiểm tra dữ liệu client gửi lên (req.body) trước khi vào route, dùng thư viện Zod.
@@ -118,3 +119,76 @@ export const sendMessageSchema = z.object({
 });
 export const sharePostToChatSchema = z.object({ postId: id, message: text(2000).optional() });
 export const reactMessageSchema = z.object({ emoji: z.string().min(1).max(8).optional() });
+
+// ----- Reels (video ngắn) -----
+export const createReelSchema = z.object({
+  video: url.min(1),
+  caption: text(300).default(''),
+  privacy: z.enum(['public', 'friends']).default('public'),
+});
+
+// ----- Trang (fanpage) -----
+const pageCategory = z.enum(PAGE_CATEGORIES);
+const webUrl = z.string().trim().max(300).refine((v) => v === '' || /^https?:\/\//i.test(v), 'Website phải bắt đầu bằng http:// hoặc https://');
+export const createPageSchema = z.object({
+  name: text(80).min(2),
+  category: pageCategory.default('other'),
+  description: text(1000).default(''),
+  website: webUrl.optional(),
+  address: text(200).optional(),
+  avatar: url.optional(),
+  cover: url.optional(),
+});
+export const updatePageSchema = z.object({
+  name: text(80).min(2).optional(),
+  category: pageCategory.optional(),
+  description: text(1000).optional(),
+  website: webUrl.optional(),
+  address: text(200).optional(),
+  avatar: url.optional(),
+  cover: url.optional(),
+});
+export const pageAdminSchema = z.object({ userId: id });
+export const createPagePostSchema = z.object({
+  content: text(10000).default(''),
+  images: z.array(url).max(20).optional(),
+  video: url.optional(),
+});
+
+// ----- Nhóm giao lưu -----
+const groupPrivacy = z.enum(['public', 'private']);
+const groupRules = z.array(text(300).min(1)).max(10);
+const groupQuestions = z.array(text(150).min(1)).max(3);
+export const createGroupSchema = z.object({
+  name: text(80).min(2),
+  description: text(1000).default(''),
+  privacy: groupPrivacy.default('public'),
+  rules: groupRules.default([]),
+  joinQuestions: groupQuestions.default([]),
+  postApproval: z.boolean().default(false),
+  avatar: url.optional(),
+  cover: url.optional(),
+});
+// Sửa nhóm: chỉ gửi trường nào cần đổi (không có giá trị mặc định để không ghi đè trường không gửi)
+export const updateGroupSchema = z.object({
+  name: text(80).min(2).optional(),
+  description: text(1000).optional(),
+  privacy: groupPrivacy.optional(),
+  rules: groupRules.optional(),
+  joinQuestions: groupQuestions.optional(),
+  postApproval: z.boolean().optional(),
+  avatar: url.optional(),
+  cover: url.optional(),
+});
+export const joinGroupSchema = z.object({ answers: z.array(text(300)).max(3).default([]) });
+export const setMemberRoleSchema = z.object({ role: z.enum(['admin', 'member']) });
+export const transferGroupSchema = z.object({ userId: id });
+export const createGroupPostSchema = z.object({
+  content: text(10000).default(''),
+  images: z.array(url).max(20).optional(),
+  video: url.optional(),
+  feeling: text(100).optional(),
+  location: text(200).optional(),
+});
+export const reportGroupPostSchema = z.object({ reason: text(300).default('') });
+export const resolveReportSchema = z.object({ action: z.enum(['dismiss', 'remove']) });

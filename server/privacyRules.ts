@@ -55,6 +55,17 @@ export function canViewContent(
   return true;
 }
 
+/**
+ * Điều kiện MongoDB: bài viết (theo quyền riêng tư) mà người xem được thấy — của mình, công khai, hoặc "bạn bè" của bạn bè — và không phải của
+ * người bị chặn. Viết thẳng vào truy vấn (thay vì lọc sau khi đã cắt trang) để mỗi trang luôn đủ bài. Bài nhóm cần thêm luật riêng của nhóm.
+ */
+export function visibleToViewerFilter(viewerId: string, friendIds: Set<string>, blockedIds: Set<string>) {
+  return {
+    author: { $nin: [...blockedIds] },
+    $or: [{ author: viewerId }, { privacy: 'public' }, { privacy: 'friends', author: { $in: [...friendIds] } }],
+  };
+}
+
 /** Kiểm tra nhanh MỘT nội dung có hiển thị với người xem không. */
 export async function canView(authorId: string, viewerId: string, privacy?: Privacy) {
   const { friendIds, blockedIds } = await getFriendAndBlockedIds(viewerId);

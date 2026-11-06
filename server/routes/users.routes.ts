@@ -10,6 +10,7 @@ import { validate, updateProfileSchema, changePasswordSchema } from '../validati
 import { userToJson, meToJson } from '../formatResponse';
 import { isBlockedBetween, getBlockedIds } from '../privacyRules';
 import { pageParams } from '../pagination';
+import { escapeRegex } from '../regex';
 
 // API người dùng (/api/users): tìm kiếm, xem hồ sơ, sửa hồ sơ, đổi mật khẩu, chặn / bỏ chặn, theo dõi / bỏ theo dõi.
 
@@ -21,9 +22,8 @@ usersRouter.get('/', async (req, res) => {
   const filter: Record<string, unknown> = {};
   const q = String(req.query.q || '').trim();
   if (q) {
-    // Thoát ký tự đặc biệt của regex để người dùng gõ gì thì tìm đúng chữ đó
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    filter.$or = [{ name: regex }, { username: regex }, { email: regex }];
+    const regex = new RegExp(escapeRegex(q), 'i');
+    filter.$or = [{ name: regex }, { username: regex }]; // không tìm theo email (riêng tư)
   }
   if (req.query.online === 'true') filter.isOnline = true;
   filter._id = { $nin: [...(await getBlockedIds(req.userId))] };

@@ -158,7 +158,9 @@ messagesRouter.post('/conversations/:id/messages', validate(sendMessageSchema), 
 
 /** Chia sẻ bài viết vào chat */
 messagesRouter.post('/conversations/:id/share-post', validate(sharePostToChatSchema), requireMember, requireNotBlocked, async (req, res) => {
-  if (!(await PostModel.exists({ _id: req.body.postId }))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  const post = await PostModel.findById(req.body.postId).select('group');
+  if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (post.group) return res.status(400).json({ error: 'Không thể chia sẻ bài viết trong nhóm qua tin nhắn.' });
   await createAndBroadcastMessage(req, res, { content: req.body.message || '', sharedPostId: req.body.postId });
 });
 

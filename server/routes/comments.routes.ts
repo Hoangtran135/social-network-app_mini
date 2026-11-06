@@ -5,9 +5,10 @@ import { PostModel } from '../models/Post';
 import { createNotification } from '../createNotification';
 import { requireAuth } from '../jwtAuth';
 import { validate, createCommentSchema, updateCommentSchema, reactPostSchema } from '../validation';
-import { commentToJson, getId, Doc } from '../formatResponse';
+import { commentToJson } from '../formatResponse';
 import { emitToUser } from '../socketServer';
-import { getFriendAndBlockedIds, canView, canViewContent, emitToAllowedViewers } from '../privacyRules';
+import { emitToAllowedViewers } from '../privacyRules';
+import { canViewPost, canInteractPost, emitToGroupMembers, getMembership, getMemberIds, isGroupAdmin } from '../groupRules';
 
 // API bình luận (/api/comments): xem, thêm (hoặc trả lời), sửa, xoá, thả cảm xúc (like / love / haha / wow / sad / angry).
 // Chỉ ai xem được bài viết mới được xem / bình luận / thích bình luận trong bài đó.
@@ -15,24 +16,14 @@ import { getFriendAndBlockedIds, canView, canViewContent, emitToAllowedViewers }
 export const commentsRouter = Router();
 commentsRouter.use(requireAuth);
 
-const canViewPost = (post: Doc, userId: string) => canView(post.author.toString(), userId, post.privacy);
-
-/** Lấy danh sách bình luận */
+/** Lấy bình luận của MỘT bài (bắt buộc ?postId=; tối đa 500, cũ nhất trước). Bài không tồn tại → danh sách rỗng. */
 commentsRouter.get('/', async (req, res) => {
   const { postId } = req.query;
-  if (typeof postId === 'string') {
-    const post = await PostModel.findById(postId).select('author privacy'); //Tìm bài viết theo id
-    if (!post) return res.json({ comments: [] });
-    if (!(await canViewPost(post, req.userId))) return res.status(403).json({ error: 'Bạn không có quyền xem bình luận của bài viết này.' });
-    const comments = await CommentModel.find({ post: postId }).sort({ createdAt: 1 }).limit(500).populate('author');
-    return res.json({ comments: comments.map(commentToJson) });
-  }
-
-  const [posts, { friendIds, blockedIds }] = await Promise.all([PostModel.find().select('author privacy'), getFriendAndBlockedIds(req.userId)]);
-  const visiblePostIds = posts
-    .filter((p: Doc) => canViewContent(getId(p.author), req.userId, p.privacy, friendIds, blockedIds))
-    .map((p: Doc) => p._id);
-  const comments = await CommentModel.find({ post: { $in: visiblePostIds } }).sort({ createdAt: 1 }).limit(20000).populate('author');
+  if (typeof postId !== 'string') return res.status(400).json({ error: 'Thiếu postId.' });
+  const post = await PostModel.findById(postId).select('author privacy group groupStatus');
+  if (!post) return res.json({ comments: [] });
+  if (!(await canViewPost(post, req.userId))) return res.status(403).json({ error: 'Bạn không có quyền xem bình luận của bài viết này.' });
+  const comments = await CommentModel.find({ post: postId }).sort({ createdAt: 1 }).limit(500).populate('author');
   res.json({ comments: comments.map(commentToJson) });
 });
 
@@ -41,7 +32,7 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   const { postId, content, image, parentId, taggedUserIds = [] } = req.body;
   const me = req.userId;
   const post = await PostModel.findById(postId);
-  if (!post || !(await canViewPost(post, me))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+  if (!post || !(await canInteractPost(post, me))) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   if (post.commentsDisabled) return res.status(403).json({ error: 'Chủ bài viết đã tắt bình luận.' });
 
   if (parentId) {
@@ -50,7 +41,12 @@ commentsRouter.post('/', validate(createCommentSchema), async (req, res) => {
   }
   if (!content && !image) return res.status(400).json({ error: 'Bình luận không được để trống.' });
 
-  const tagged: string[] = [...new Set<string>(taggedUserIds)].filter((id) => id !== me);
+  let tagged: string[] = [...new Set<string>(taggedUserIds)].filter((id) => id !== me);
+  // Bài trong nhóm: chỉ gắn thẻ được thành viên của nhóm (người ngoài không được nhận nội dung bình luận)
+  if (post.group) {
+    const memberIds = new Set(await getMemberIds(post.group.toString()));
+    tagged = tagged.filter((id) => memberIds.has(id));
+  }
   const comment = await CommentModel.create({ post: postId, author: me, content, image, parent: parentId, taggedUsers: tagged });
   await comment.populate(['author', 'taggedUsers']);
 
@@ -77,7 +73,8 @@ commentsRouter.delete('/:id', async (req, res) => {
   if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });
   const post = await PostModel.findById(comment.post);
   const isAuthor = comment.author.toString() === req.userId;
-  const isPostOwner = post?.author.toString() === req.userId;
+  // Chủ bài viết được xoá bình luận trong bài; bài trong nhóm thì quản trị viên nhóm cũng được
+  const isPostOwner = post?.author.toString() === req.userId || (!!post?.group && isGroupAdmin(await getMembership(post.group.toString(), req.userId)));
   if (!isAuthor && !isPostOwner) return res.status(403).json({ error: 'Bạn không có quyền xóa bình luận này.' });
 
   // Chủ bài xoá bình luận của người khác → báo cho người viết bình luận
@@ -87,7 +84,8 @@ commentsRouter.delete('/:id', async (req, res) => {
   await comment.deleteOne();
   if (post) await PostModel.updateOne({ _id: post._id }, [{ $set: { commentsCount: { $max: [0, { $subtract: [{ $ifNull: ['$commentsCount', 0] }, 1] }] } } }], { updatePipeline: true });
   res.json({ ok: true });
-  if (post) emitToAllowedViewers(post.privacy, post.author.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, req.userId);
+  if (post?.group) emitToGroupMembers(post.group.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, { exclude: req.userId });
+  else if (post) emitToAllowedViewers(post.privacy, post.author.toString(), 'comment:delete', { postId: post.id, commentId: comment.id }, req.userId);
 });
 
 /** Sửa nội dung bình luận (chỉ tác giả). Bình luận chỉ có ảnh thì được để trống chữ. */
@@ -108,8 +106,8 @@ commentsRouter.patch('/:id', validate(updateCommentSchema), async (req, res) => 
 async function reactToComment(req: Request, res: Response, type: string) {
   const comment = await CommentModel.findById(req.params.id);
   if (!comment) return res.status(404).json({ error: 'Không tìm thấy bình luận.' });
-  const post = await PostModel.findById(comment.post).select('author privacy');
-  if (post && !(await canViewPost(post, req.userId))) return res.status(403).json({ error: 'Bạn không có quyền tương tác với bình luận này.' });
+  const post = await PostModel.findById(comment.post).select('author privacy group groupStatus');
+  if (post && !(await canInteractPost(post, req.userId))) return res.status(403).json({ error: 'Bạn không có quyền tương tác với bình luận này.' });
 
   // MỘT cập nhật nguyên tử (pipeline) trên cả likes và reactions: cùng loại với cảm xúc hiện tại thì bỏ, khác loại thì đổi, chưa có thì thêm.
   const me = new mongoose.Types.ObjectId(req.userId);

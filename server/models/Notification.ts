@@ -9,7 +9,7 @@ const notificationSchema = new Schema(
     type: { type: String, enum: ['like', 'comment', 'friend_request', 'friend_accept', 'system'], required: true },
     content: { type: String, required: true },
     targetId: String,
-    targetType: { type: String, enum: ['post', 'profile', 'system'] },
+    targetType: { type: String, enum: ['post', 'profile', 'group', 'page', 'system'] },
     isRead: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
