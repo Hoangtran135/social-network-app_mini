@@ -215,3 +215,26 @@ export const CountBadge: React.FC<{ count: number; className?: string }> = ({ co
   count > 0 ? (
     <span className={`min-w-5 h-5 px-1.5 bg-rose-500 text-white text-[11px] font-semibold leading-none rounded-full flex items-center justify-center ${className}`}>{count > 99 ? '99+' : count}</span>
   ) : null;
+
+/** Ảnh vuông bo góc của một nhóm hoặc trang: có ảnh thì hiện ảnh, không thì ô màu kèm chữ cái đầu của tên. */
+export const SquareAvatar: React.FC<{ item: { name: string; avatar?: string }; size?: string; className?: string }> = ({ item, size = 'size-12', className = '' }) =>
+  item.avatar ? (
+    <img src={item.avatar} alt="" loading="lazy" className={`${size} rounded-xl object-cover bg-slate-200 shrink-0 ${className}`} />
+  ) : (
+    <div aria-hidden="true" className={`${size} rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white font-bold flex items-center justify-center shrink-0 ${className}`}>
+      {item.name.trim().charAt(0).toUpperCase()}
+    </div>
+  );
+
+/** Khung một mục trong tab quản trị (nhóm / trang): thẻ có icon + tiêu đề + huy hiệu đếm số việc đang chờ. */
+export const AdminSection: React.FC<{ icon: LucideIcon; title: string; count?: number; children: React.ReactNode }> = ({ icon: Icon, title, count = 0, children }) => (
+  <section className="card p-4 sm:p-5">
+    <h3 className="section-title flex items-center gap-2 mb-3">
+      <Icon className="w-4 h-4 text-slate-400" /> {title} <CountBadge count={count} />
+    </h3>
+    {children}
+  </section>
+);
+
+/** Dòng chữ mờ cho trạng thái "không có gì" trong một mục quản trị. */
+export const MutedText: React.FC<{ children: React.ReactNode }> = ({ children }) => <p className="text-sm text-slate-400 py-2">{children}</p>;

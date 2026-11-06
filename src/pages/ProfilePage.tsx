@@ -99,7 +99,7 @@ export const ProfilePage: React.FC = () => {
 
   const isFriend = friends.some((f) => f.id === user.id);
   // Bài của người này + bài người khác đăng lên tường họ; bài được ghim lên đầu
-  const userPosts = posts.filter((p) => p.author.id === user.id || p.wallOwnerId === user.id).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+  const userPosts = posts.filter((p) => !p.groupId && !p.kind && !p.pageId && (p.author.id === user.id || p.wallOwnerId === user.id)).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
   const photos = userPosts.flatMap((p) => p.images || []);
   const joined = new Date(user.joinDate).toLocaleDateString('vi-VN');
   const links = SOCIAL_PLATFORMS.filter((p) => user.socialLinks?.[p.key]);
@@ -109,7 +109,7 @@ export const ProfilePage: React.FC = () => {
     ['Học vấn', user.education],
     ['Nơi sống', user.location],
     ['Website', user.website && <a href={/^https?:\/\//.test(user.website) ? user.website : `https://${user.website}`} target="_blank" rel="noreferrer noopener" className="text-blue-600 hover:underline break-all">{user.website}</a>],
-    ['Email', user.email],
+    ['Email', isMe ? user.email : undefined], // email chỉ hiện với chính chủ
     ['Tham gia', joined],
   ];
 
@@ -127,7 +127,7 @@ export const ProfilePage: React.FC = () => {
             </AvatarFrame>
             <div className="flex gap-2 flex-wrap justify-center">
               {isMe ? (
-                <Link to="/settings/profile" className="btn-primary flex items-center gap-1.5">
+                <Link to="/settings/profile" className="btn-primary">
                   <Edit3 className="w-4 h-4" /> Chỉnh sửa trang cá nhân
                 </Link>
               ) : (
@@ -139,11 +139,11 @@ export const ProfilePage: React.FC = () => {
                       if (count !== undefined) setStats((s) => ({ followingCount: s?.followingCount ?? 0, followersCount: count }));
                     }}
                     aria-pressed={following.some((f) => f.id === user.id)}
-                    className={following.some((f) => f.id === user.id) ? 'btn-secondary' : 'btn-primary'}
+                    className={`btn-stable ${following.some((f) => f.id === user.id) ? 'btn-secondary' : 'btn-primary'}`}
                   >
                     {following.some((f) => f.id === user.id) ? 'Đang theo dõi' : 'Theo dõi'}
                   </button>
-                  <button onClick={async () => openChat(await getOrCreateConversation(user))} className="btn-secondary flex items-center gap-1.5">
+                  <button onClick={async () => openChat(await getOrCreateConversation(user))} className="btn-secondary">
                     <MessageCircle className="w-4 h-4" /> Nhắn tin
                   </button>
                   <button
@@ -286,27 +286,27 @@ const FriendButton: React.FC<{ user: User }> = ({ user }) => {
 
   if (friends.some((f) => f.id === user.id)) {
     return (
-      <button onClick={async () => (await confirm(`Hủy kết bạn với ${user.name}?`)) && removeFriend(user.id)} className="btn-secondary flex items-center gap-1.5">
+      <button onClick={async () => (await confirm(`Hủy kết bạn với ${user.name}?`)) && removeFriend(user.id)} className="btn-secondary btn-stable">
         <UserCheck className="w-4 h-4 text-emerald-600" /> Bạn bè
       </button>
     );
   }
   if (incoming) {
     return (
-      <button onClick={() => acceptFriendRequest(incoming.id)} className="btn-primary flex items-center gap-1.5">
+      <button onClick={() => acceptFriendRequest(incoming.id)} className="btn-primary btn-stable">
         <UserPlus className="w-4 h-4" /> Chấp nhận kết bạn
       </button>
     );
   }
   if (sent) {
     return (
-      <button onClick={() => cancelFriendRequest(sent.id)} className="btn-secondary flex items-center gap-1.5">
+      <button onClick={() => cancelFriendRequest(sent.id)} className="btn-secondary btn-stable">
         <UserPlus className="w-4 h-4" /> Hủy lời mời
       </button>
     );
   }
   return (
-    <button onClick={() => sendFriendRequest(user)} className="btn-primary flex items-center gap-1.5">
+    <button onClick={() => sendFriendRequest(user)} className="btn-primary btn-stable">
       <UserPlus className="w-4 h-4" /> Thêm bạn bè
     </button>
   );

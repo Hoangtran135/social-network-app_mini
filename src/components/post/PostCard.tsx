@@ -1,18 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, X, EyeOff, MessageSquareOff, MessageSquare, LucideIcon } from 'lucide-react';
+import { Trash2, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Bookmark, Globe, Users, Lock, Edit2, Copy, Pin, EyeOff, MessageSquareOff, MessageSquare, Flag, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocial } from '../../context/SocialContext';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { useChatWindows } from '../../context/ChatWindowsContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Post, ReactionType } from '../../types';
+import { GroupRole, Post, ReactionType } from '../../types';
 import { feelingText, timeAgo } from '../../utils/format';
-import { UserLinks, AvatarFrame } from '../ui';
+import { UserLinks, AvatarFrame, SquareAvatar } from '../ui';
 import { CommentSection } from './CommentSection';
 import { PostFormModal } from './PostFormModal';
 import { PostContent } from './PostContent';
+import { EditHistoryDialog, ImagePreview, ReportDialog, SendToFriendDialog, ShareDialog } from './PostDialogs';
 import { REACTIONS } from '../../utils/reactions';
 
 // Thẻ hiển thị MỘT bài viết (dùng ở bảng tin, trang cá nhân, đã lưu, kỷ niệm):
@@ -52,9 +53,11 @@ const MenuItem: React.FC<{ icon: LucideIcon; label: string; onClick: () => void;
   </button>
 );
 
-export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
+/** groupRole: vai trò của người xem trong nhóm của bài (chỉ truyền ở trang nhóm) — quản trị viên được xoá bài người khác, thành viên được báo cáo. */
+/** pageAdmin: người xem là quản trị viên của Trang đã đăng bài này (chỉ truyền ở trang của Trang) — được xoá bài của trang. */
+export const PostCard: React.FC<{ post: Post; groupRole?: GroupRole | null; pageAdmin?: boolean }> = ({ post, groupRole = null, pageAdmin = false }) => {
   const { currentUser } = useAuth();
-  const { toggleReaction, toggleSavePost, togglePinPost, sharePost, sharePostToChat, getOrCreateConversation, deletePost, hidePost, toggleComments, showToast, friends } = useSocial();
+  const { toggleReaction, toggleSavePost, togglePinPost, sharePost, sharePostToChat, getOrCreateConversation, deletePost, hidePost, toggleComments, showToast, friends, deleteGroupPost, reportGroupPost, deletePagePost } = useSocial();
   const { openChat } = useChatWindows();
   const confirm = useConfirm();
 
@@ -63,8 +66,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showSendToFriend, setShowSendToFriend] = useState(false);
   const [shareDialog, setShareDialog] = useState(false); // hộp thoại chia sẻ kèm lời bình
-  const [shareMessage, setShareMessage] = useState('');
   const [showHistory, setShowHistory] = useState(false); // lịch sử chỉnh sửa
+  const [reportOpen, setReportOpen] = useState(false); // hộp thoại báo cáo bài trong nhóm
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const menuRef = useClickOutside(() => setMenu(null));
   const hasReactions = post.reactions.length > 0;
@@ -78,12 +81,16 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     setShowSendToFriend(false);
     setShareDialog(false);
     setShowHistory(false);
+    setReportOpen(false);
   });
 
   const isOwner = currentUser?.id === post.author.id;
   const myReaction = post.reactions.find((r) => r.userId === currentUser?.id);
   const reactionTypes = [...new Set(post.reactions.map((r) => r.type))];
-  const PrivacyIcon = PRIVACY_ICONS[post.privacy];
+  const isGroupPost = !!post.groupId;
+  const canModerate = isGroupPost && (groupRole === 'owner' || groupRole === 'admin');
+  const PrivacyIcon = isGroupPost ? Users : PRIVACY_ICONS[post.privacy];
+  const privacyLabel = isGroupPost ? `Bài viết trong nhóm ${post.groupName || ''}`.trim() : PRIVACY_LABELS[post.privacy];
 
   /** Chọn mục trong menu thì đóng menu rồi mới làm việc. */
   const run = (action: () => void) => () => {
@@ -104,16 +111,21 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       {/* ----- Phần đầu: tác giả, thời gian, menu "..." ----- */}
       <div className="p-5 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <Link to={`/profile/${post.author.id}`}>
-            <AvatarFrame frame={post.author.avatarFrame}>
-              <img src={post.author.avatar} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover shrink-0" />
-            </AvatarFrame>
+          <Link to={post.pageId ? `/pages/${post.pageId}` : `/profile/${post.author.id}`} aria-label={post.pageId ? `Trang ${post.pageName}` : undefined}>
+            {post.pageId ? (
+              <SquareAvatar item={{ name: post.pageName || '?', avatar: post.pageAvatar }} size="w-11 h-11" />
+            ) : (
+              <AvatarFrame frame={post.author.avatarFrame}>
+                <img src={post.author.avatar} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover shrink-0" />
+              </AvatarFrame>
+            )}
           </Link>
           <div className="min-w-0 text-sm">
             <div>
-              <Link to={`/profile/${post.author.id}`} className="tap-area font-semibold text-slate-900 hover:text-blue-600 break-words">
-                {post.author.name}
+              <Link to={post.pageId ? `/pages/${post.pageId}` : `/profile/${post.author.id}`} className="tap-area font-semibold text-slate-900 hover:text-blue-600 break-words">
+                {post.pageId ? post.pageName : post.author.name}
               </Link>
+              {post.pageId && pageAdmin && <span className="text-xs text-slate-500"> · đăng bởi {post.author.name}</span>}
               {post.wallOwnerId && (
                 <span className="text-xs text-slate-500">
                   {' ➜ '}
@@ -137,9 +149,10 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 </button>
               )}
               <span>·</span>
-              <span title={PRIVACY_LABELS[post.privacy]} className="inline-flex">
+              <span title={privacyLabel} className="inline-flex">
                 <PrivacyIcon className="w-3.5 h-3.5" />
               </span>
+              {post.groupStatus === 'pending' && <span className="text-amber-600 font-semibold">· Đang chờ duyệt</span>}
               {post.location && <span>· 📍 {post.location}</span>}
             </div>
           </div>
@@ -151,7 +164,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </button>
           {menu === 'options' && (
             <div className="animate-pop absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-semibold">
-              <MenuItem icon={Bookmark} label={post.isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'} onClick={run(() => toggleSavePost(post.id))} />
+              {!isGroupPost && <MenuItem icon={Bookmark} label={post.isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'} onClick={run(() => toggleSavePost(post.id))} />}
               {!isOwner && <MenuItem icon={EyeOff} label="Ẩn bài viết" onClick={run(() => hidePost(post.id))} />}
               <MenuItem
                 icon={Copy}
@@ -161,9 +174,26 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   showToast('Đã sao chép liên kết bài viết!');
                 })}
               />
+              {isGroupPost && !isOwner && !!groupRole && post.groupStatus !== 'pending' && <MenuItem icon={Flag} label="Báo cáo bài viết" onClick={run(() => setReportOpen(true))} />}
+              {pageAdmin && !isOwner && !!post.pageId && (
+                <MenuItem
+                  icon={Trash2}
+                  label="Xóa khỏi trang"
+                  danger
+                  onClick={run(async () => (await confirm('Xóa bài viết này khỏi trang?')) && deletePagePost(post.pageId!, post.id))}
+                />
+              )}
+              {canModerate && !isOwner && (
+                <MenuItem
+                  icon={Trash2}
+                  label="Xóa khỏi nhóm"
+                  danger
+                  onClick={run(async () => (await confirm('Xóa bài viết này khỏi nhóm?')) && deleteGroupPost(post.groupId!, post.id))}
+                />
+              )}
               {isOwner && (
                 <>
-                  <MenuItem icon={Pin} label={post.pinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'} onClick={run(() => togglePinPost(post.id))} />
+                  {!isGroupPost && <MenuItem icon={Pin} label={post.pinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'} onClick={run(() => togglePinPost(post.id))} />}
                   <MenuItem
                     icon={post.commentsDisabled ? MessageSquare : MessageSquareOff}
                     label={post.commentsDisabled ? 'Bật bình luận' : 'Tắt bình luận'}
@@ -253,6 +283,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           <MessageCircle className="w-4 h-4" /> Bình luận
         </button>
 
+        {!isGroupPost && (
         <div className="relative flex-1" ref={menu === 'share' ? menuRef : undefined}>
           <button onClick={() => setMenu(menu === 'share' ? null : 'share')} className="w-full py-2 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-slate-100">
             <Share2 className="w-4 h-4" /> Chia sẻ
@@ -264,7 +295,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
             </div>
           )}
         </div>
+        )}
 
+        {!isGroupPost && (
         <button
           onClick={() => toggleSavePost(post.id)}
           title={post.isSaved ? 'Bỏ lưu' : 'Lưu bài viết'}
@@ -274,6 +307,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         >
           <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-current' : ''}`} />
         </button>
+        )}
       </div>
 
       {showComments && <CommentSection postId={post.id} disabled={!!post.commentsDisabled} />}
@@ -281,98 +315,28 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       {/* ----- Các hộp thoại ----- */}
       {isEditing && <PostFormModal post={post} onClose={() => setIsEditing(false)} />}
 
-      {showSendToFriend && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowSendToFriend(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Gửi bài viết cho bạn bè" className="animate-pop bg-white rounded-2xl max-w-sm w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-800">Gửi bài viết cho bạn bè</h3>
-              <button onClick={() => setShowSendToFriend(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto -mx-1 px-1">
-              {friends.length === 0 && <p className="py-6 text-center text-xs text-slate-400">Bạn chưa có bạn bè nào để gửi.</p>}
-              {friends.map((f) => (
-                <button key={f.id} onClick={() => sendToFriend(f.id)} className="w-full flex items-center gap-3 p-2.5 hover:bg-blue-50 rounded-xl text-left">
-                  <img src={f.avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                  <span className="text-xs font-semibold text-slate-700 truncate">{f.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {showSendToFriend && <SendToFriendDialog friends={friends} onPick={sendToFriend} onClose={() => setShowSendToFriend(false)} />}
       {shareDialog && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShareDialog(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Chia sẻ bài viết" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-800">Chia sẻ lên trang cá nhân</h3>
-              <button onClick={() => setShareDialog(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <textarea
-              autoFocus
-              rows={3}
-              maxLength={2000}
-              value={shareMessage}
-              onChange={(e) => setShareMessage(e.target.value)}
-              placeholder="Hãy nói gì đó về nội dung này... (không bắt buộc)"
-              className="input resize-none"
-            />
-            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
-              <b className="text-slate-800">{post.author.name}</b>
-              <p className="line-clamp-3 break-words whitespace-pre-line">{post.content}</p>
-            </div>
-            <button
-              onClick={() => {
-                sharePost(post.id, shareMessage.trim() || undefined);
-                setShareMessage('');
-                setShareDialog(false);
-              }}
-              className="btn-primary w-full mt-3"
-            >
-              Chia sẻ ngay
-            </button>
-          </div>
-        </div>
+        <ShareDialog
+          post={post}
+          onClose={() => setShareDialog(false)}
+          onShare={(message) => {
+            sharePost(post.id, message);
+            setShareDialog(false);
+          }}
+        />
       )}
-
-      {showHistory && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Lịch sử chỉnh sửa" className="animate-pop bg-white rounded-2xl max-w-md w-full p-5 max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-800">Lịch sử chỉnh sửa</h3>
-              <button onClick={() => setShowHistory(false)} aria-label="Đóng" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto space-y-3 text-sm">
-              <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
-                <p className="text-[11px] font-semibold text-blue-600 mb-1">Phiên bản hiện tại · {timeAgo(post.updatedAt)}</p>
-                <p className="whitespace-pre-line break-words text-slate-800">{post.content || '(không có nội dung chữ)'}</p>
-              </div>
-              {!post.editHistory?.length && <p className="text-xs text-slate-500 text-center py-2">Bài viết này không có phiên bản nội dung cũ (chỉ đổi ảnh, quyền riêng tư hoặc cảm xúc).</p>}
-              {[...(post.editHistory || [])].reverse().map((version, i) => (
-                <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <p className="text-[11px] font-semibold text-slate-500 mb-1">Phiên bản cũ · bị thay thế {timeAgo(version.editedAt)}</p>
-                  <p className="whitespace-pre-line break-words text-slate-700">{version.content || '(không có nội dung chữ)'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {reportOpen && (
+        <ReportDialog
+          onClose={() => setReportOpen(false)}
+          onSubmit={async (reason) => {
+            await reportGroupPost(post.groupId!, post.id, reason);
+            setReportOpen(false);
+          }}
+        />
       )}
-
-      {previewImage && (
-        <div onClick={() => setPreviewImage(null)} className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out">
-          <button onClick={() => setPreviewImage(null)} aria-label="Đóng ảnh" className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white">
-            <X className="w-6 h-6" />
-          </button>
-          <img src={previewImage} alt="" className="max-h-[90dvh] max-w-[95vw] object-contain rounded-xl" />
-        </div>
-      )}
+      {showHistory && <EditHistoryDialog post={post} onClose={() => setShowHistory(false)} />}
+      {previewImage && <ImagePreview src={previewImage} onClose={() => setPreviewImage(null)} />}
     </article>
   );
 };

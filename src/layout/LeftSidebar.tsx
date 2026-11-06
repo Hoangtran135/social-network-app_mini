@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Settings, Bell, Bookmark, UserCircle, Clock, Image as ImageIcon } from 'lucide-react';
+import { Home, Users, UsersRound, Flag, Clapperboard, Settings, Bell, Bookmark, UserCircle, Clock, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../context/SocialContext';
 import { CountBadge } from '../components/ui';
@@ -19,6 +19,9 @@ export const LeftSidebar: React.FC = () => {
       { label: 'Bảng tin', path: '/', icon: Home },
       { label: 'Trang cá nhân', path: myProfile, icon: UserCircle },
       { label: 'Bạn bè & Lời mời', path: '/friends', icon: Users, badge: friendRequests.length },
+      { label: 'Nhóm', path: '/groups', icon: UsersRound },
+      { label: 'Trang', path: '/pages', icon: Flag },
+      { label: 'Reels', path: '/reels', icon: Clapperboard },
       { label: 'Thông báo', path: '/notifications', icon: Bell, badge: unread },
     ],
     [
@@ -33,6 +36,7 @@ export const LeftSidebar: React.FC = () => {
   const isActive = (path: string) => {
     const [pathOnly, query] = path.split('?');
     if (pathOnly === '/settings') return pathname.startsWith('/settings');
+    if (pathOnly === '/groups' || pathOnly === '/pages') return pathname.startsWith(pathOnly);
     if (pathname !== pathOnly) return false;
     if (query) return search.includes(query);
     if (pathOnly === myProfile) return !search.includes('tab=photos');

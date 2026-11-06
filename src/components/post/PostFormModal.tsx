@@ -17,8 +17,8 @@ import { MentionSuggestions } from './MentionSuggestions';
 
 const FEELINGS = ['hạnh phúc 😊', 'hào hứng 🌟', 'thư giãn ☕', 'tuyệt vời 🌄', 'đang ăn 🍕', 'đang du lịch ✈️', 'đang code 💻', 'yêu đời ❤️'];
 
-export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: () => void }> = ({ post, wallOwner, onClose }) => {
-  const { createPost, updatePost, friends } = useSocial();
+export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; groupId?: string; groupName?: string; pageId?: string; pageName?: string; onClose: () => void }> = ({ post, wallOwner, groupId, groupName, pageId, pageName, onClose }) => {
+  const { createPost, createGroupPost, createPagePost, updatePost, friends } = useSocial();
   const { currentUser } = useAuth();
   const isEdit = !!post;
 
@@ -47,6 +47,8 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
     const data = { content, privacy, feeling: feeling || undefined, images, video: video || undefined };
     // Sửa bài gửi cả chuỗi rỗng để XOÁ vị trí; đăng mới thì bỏ trống = không gửi
     if (isEdit) updatePost(post.id, { ...data, location: location.trim() });
+    else if (pageId) createPagePost(pageId, { content, images, video: video || undefined });
+    else if (groupId) createGroupPost(groupId, { content, images, video: video || undefined, feeling: feeling || undefined, location: location.trim() || undefined });
     else createPost({ ...data, location: location.trim() || undefined, wallOwner, taggedUserIds: taggedIds });
     onClose();
   };
@@ -61,7 +63,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         className="animate-pop bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 max-h-[92dvh] overflow-y-auto overscroll-contain"
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 className="section-title">{isEdit ? 'Chỉnh sửa bài viết' : wallOwner ? `Đăng lên tường của ${wallOwner.name}` : 'Tạo bài viết mới'}</h3>
+          <h3 className="section-title">{isEdit ? 'Chỉnh sửa bài viết' : pageId ? `Đăng lên trang ${pageName || ''}`.trim() : groupId ? `Đăng vào nhóm ${groupName || ''}`.trim() : wallOwner ? `Đăng lên tường của ${wallOwner.name}` : 'Tạo bài viết mới'}</h3>
           <button type="button" aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
             <X className="w-5 h-5" />
           </button>
@@ -76,11 +78,19 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
               {taggedUsers.length > 0 && <span className="font-normal text-slate-500 text-xs"> cùng với {taggedUsers.map((u) => u.name).join(', ')}</span>}
               {location.trim() && <span className="font-normal text-slate-500 text-xs"> tại {location.trim()}</span>}
             </div>
-            <select value={privacy} onChange={(e) => setPrivacy(e.target.value as Privacy)} className="mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">
-              <option value="public">🌐 Công khai</option>
-              <option value="friends">👥 Bạn bè</option>
-              <option value="only_me">🔒 Chỉ mình tôi</option>
-            </select>
+            {pageId ? (
+              <span className="inline-block mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">🌐 Công khai · đăng với tư cách trang</span>
+            ) : isEdit && post?.groupId ? (
+              <span className="inline-block mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">👥 Bài trong nhóm</span>
+            ) : groupId ? (
+              <span className="inline-block mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">👥 Thành viên nhóm</span>
+            ) : (
+              <select value={privacy} onChange={(e) => setPrivacy(e.target.value as Privacy)} aria-label="Quyền riêng tư" className="mt-1 text-[11px] font-semibold text-slate-600 bg-slate-100 rounded-lg px-2 py-0.5">
+                <option value="public">🌐 Công khai</option>
+                <option value="friends">👥 Bạn bè</option>
+                <option value="only_me">🔒 Chỉ mình tôi</option>
+              </select>
+            )}
           </div>
         </div>
 
@@ -166,7 +176,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
             <button type="button" title="Check-in" onClick={() => setPanel(panel === 'location' ? null : 'location')} className={`p-2 rounded-lg hover:bg-slate-100 text-rose-600 ${location ? 'bg-rose-50' : ''}`}>
               <MapPin className="w-5 h-5" />
             </button>
-            {!isEdit && (
+            {!isEdit && !groupId && !pageId && (
               <button type="button" title="Gắn thẻ bạn bè" onClick={() => setPanel(panel === 'tags' ? null : 'tags')} className="p-2 rounded-lg hover:bg-slate-100 text-blue-600">
                 <UserPlus className="w-5 h-5" />
               </button>
@@ -175,7 +185,7 @@ export const PostFormModal: React.FC<{ post?: Post; wallOwner?: User; onClose: (
         </div>
 
         <button type="submit" disabled={isEmpty || isUploading} className="btn-primary w-full sticky bottom-0">
-          {isEdit ? 'Lưu thay đổi' : wallOwner ? 'Đăng lên tường' : 'Đăng bài viết'}
+          {isEdit ? 'Lưu thay đổi' : pageId ? 'Đăng lên trang' : groupId ? 'Đăng vào nhóm' : wallOwner ? 'Đăng lên tường' : 'Đăng bài viết'}
         </button>
       </form>
     </div>

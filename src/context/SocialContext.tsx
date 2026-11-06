@@ -220,7 +220,8 @@ function useSocialState() {
           api.get<{ requests: FriendRequest[] }>('/friends/requests').then((d) => setFriendRequests(d.requests)).catch(() => {});
         }
       },
-      'post:new': ({ post }: { post: Post }) => setPosts((list) => (list.some((p) => p.id === post.id) ? list : [post, ...list])),
+      // Bài mới thì thêm lên đầu; bài đã có (vd bản "chờ duyệt" vừa được duyệt) thì thay bằng bản mới, giữ trạng thái "đã lưu" của mình
+      'post:new': ({ post }: { post: Post }) => setPosts((list) => (list.some((p) => p.id === post.id) ? list.map((p) => (p.id === post.id ? { ...post, isSaved: p.isSaved } : p)) : [post, ...list])),
       // Dữ liệu gửi chung cho nhiều người không biết mình đã lưu bài chưa → giữ isSaved cũ
       'post:update': ({ post }: { post: Post }) =>
         updatePosts((list) => list.map((p) => (p.id === post.id ? { ...post, isSaved: p.isSaved } : p))),
@@ -261,13 +262,14 @@ function useSocialState() {
     hasMorePosts,
     isLoadingMorePosts,
 
-    /** Cuộn vô hạn: tải trang bài viết tiếp theo (bỏ qua số bài đã có). */
+    /** Cuộn vô hạn: tải trang bài viết tiếp theo, bỏ qua số bài bảng tin đã có (không đếm bài nhóm / reel cùng nằm trong danh sách vì server không tính chúng vào bảng tin). */
     loadMorePosts: async () => {
       if (isLoadingMorePosts || !hasMorePosts) return;
       setIsLoadingMorePosts(true);
-      const d = await api.get<{ posts: Post[] }>(`/posts?limit=${POSTS_PAGE}&skip=${posts.length}`).catch(() => null);
+      const feedCount = posts.filter((p) => !p.groupId && !p.kind).length;
+      const d = await api.get<{ posts: Post[] }>(`/posts?limit=${POSTS_PAGE}&skip=${feedCount}`).catch(() => null);
       if (d) {
-        setPosts((list) => [...list, ...d.posts]);
+        setPosts((list) => [...list, ...d.posts.filter((p) => !list.some((x) => x.id === p.id))]);
         setHasMorePosts(d.posts.length === POSTS_PAGE);
       }
       setIsLoadingMorePosts(false);
@@ -496,6 +498,108 @@ function useSocialState() {
         upsertMessage(conversationId, message);
         setLastMessage(conversationId, message);
       }, 'Không thể gửi tin nhắn.'),
+
+    // ===== Trang (fanpage) =====
+
+    /** Tải bài viết của một trang (công khai) rồi gộp vào danh sách bài. */
+    loadPagePosts: async (pageId: string) => {
+      const d = await api.get<{ posts: Post[] }>(`/pages/${pageId}/posts?limit=50`).catch(() => null);
+      if (!d) return false;
+      setPosts((list) => [...d.posts, ...list.filter((p) => !d.posts.some((n) => n.id === p.id))]);
+      return true;
+    },
+
+    /** Đăng bài với tư cách trang (chủ trang / quản trị viên). */
+    createPagePost: (pageId: string, data: { content: string; images?: string[]; video?: string }) =>
+      attempt(async () => {
+        const { post } = await api.post<{ post: Post }>(`/pages/${pageId}/posts`, data);
+        setPosts((list) => [post, ...list.filter((p) => p.id !== post.id)]);
+        showToast('Đã đăng bài lên trang!');
+        return post;
+      }, 'Không thể đăng bài lên trang.'),
+
+    /** Quản trị viên xoá một bài của trang. */
+    deletePagePost: (pageId: string, postId: string) =>
+      attempt(async () => {
+        await api.delete(`/pages/${pageId}/posts/${postId}`);
+        updatePosts((list) => list.filter((p) => p.id !== postId));
+        showToast('Đã xoá bài viết khỏi trang.', 'info');
+      }, 'Không thể xoá bài viết khỏi trang.'),
+
+    // ===== Reels (video ngắn) =====
+
+    /** Tải một trang reel (đã xếp theo độ phù hợp), gộp vào danh sách bài; trả về danh sách reel của trang đó (hoặc null nếu lỗi). */
+    loadReels: async (skip = 0, limit = 8) => {
+      const d = await api.get<{ reels: Post[] }>(`/reels?limit=${limit}&skip=${skip}`).catch(() => null);
+      if (!d) return null;
+      setPosts((list) => [...d.reels.filter((r) => !list.some((p) => p.id === r.id)), ...list.map((p) => d.reels.find((r) => r.id === p.id) ?? p)]);
+      return d.reels;
+    },
+
+    /** Lấy một reel theo id (mở thẳng từ kết quả tìm kiếm). */
+    fetchReel: async (reelId: string) => {
+      const d = await api.get<{ reel: Post }>(`/reels/${reelId}`).catch(() => null);
+      if (d) setPosts((list) => [d.reel, ...list.filter((p) => p.id !== reelId)]);
+      return d?.reel ?? null;
+    },
+
+    /** Đăng reel mới (bắt buộc có video). */
+    createReel: (data: { video: string; caption: string; privacy: 'public' | 'friends' }) =>
+      attempt(async () => {
+        const { reel } = await api.post<{ reel: Post }>('/reels', data);
+        setPosts((list) => [reel, ...list.filter((p) => p.id !== reel.id)]);
+        showToast('Đã đăng Reel!');
+        return reel;
+      }, 'Không thể đăng Reel.'),
+
+    /** Ghi nhận một lượt xem reel (lỗi thì bỏ qua, không làm phiền người xem). */
+    viewReel: (reelId: string) =>
+      api.post<{ viewsCount: number }>(`/reels/${reelId}/view`).then((d) => updatePosts((list) => list.map((p) => (p.id === reelId ? { ...p, viewsCount: d.viewsCount } : p)))).catch(() => {}),
+
+    // ===== Bài viết trong nhóm (hiện ở trang nhóm; không lên bảng tin chung) =====
+
+    /** Tải bài của nhóm (đã duyệt, hoặc ?status=pending) rồi gộp vào danh sách bài. */
+    loadGroupPosts: async (groupId: string, status: 'approved' | 'pending' = 'approved') => {
+      const d = await api.get<{ posts: Post[] }>(`/groups/${groupId}/posts?status=${status}&limit=50`).catch(() => null);
+      if (!d) return false;
+      setPosts((list) => [...d.posts, ...list.filter((p) => !d.posts.some((n) => n.id === p.id))]);
+      return true;
+    },
+
+    /** Đăng bài vào nhóm. Nhóm bật duyệt bài thì bài ở trạng thái chờ duyệt. */
+    createGroupPost: (groupId: string, data: { content: string; images?: string[]; video?: string; feeling?: string; location?: string }) =>
+      attempt(async () => {
+        const { post } = await api.post<{ post: Post }>(`/groups/${groupId}/posts`, data);
+        setPosts((list) => [post, ...list.filter((p) => p.id !== post.id)]);
+        showToast(post.groupStatus === 'pending' ? 'Bài viết đã được gửi và đang chờ quản trị viên duyệt.' : 'Đã đăng bài vào nhóm!');
+        return post;
+      }, 'Không thể đăng bài vào nhóm.'),
+
+    /** Quản trị viên xoá bài của người khác khỏi nhóm. */
+    deleteGroupPost: (groupId: string, postId: string) =>
+      attempt(async () => {
+        await api.delete(`/groups/${groupId}/posts/${postId}`);
+        updatePosts((list) => list.filter((p) => p.id !== postId));
+        showToast('Đã xoá bài viết khỏi nhóm.', 'info');
+      }, 'Không thể xoá bài viết khỏi nhóm.'),
+
+    /** Quản trị viên duyệt / từ chối bài chờ duyệt. */
+    moderateGroupPost: (groupId: string, postId: string, action: 'approve' | 'reject') =>
+      attempt(async () => {
+        const res = await api.post<{ post?: Post }>(`/groups/${groupId}/posts/${postId}/${action}`);
+        if (action === 'approve' && res.post) replacePost(res.post);
+        else updatePosts((list) => list.filter((p) => p.id !== postId));
+        showToast(action === 'approve' ? 'Đã duyệt bài viết.' : 'Đã từ chối bài viết.', action === 'approve' ? 'success' : 'info');
+        return true;
+      }, 'Không thể xử lý bài viết.'),
+
+    /** Báo cáo một bài trong nhóm cho quản trị viên. */
+    reportGroupPost: (groupId: string, postId: string, reason: string) =>
+      attempt(async () => {
+        await api.post(`/groups/${groupId}/posts/${postId}/report`, { reason });
+        showToast('Đã gửi báo cáo cho quản trị viên nhóm. Cảm ơn bạn!');
+        return true;
+      }, 'Không thể gửi báo cáo.'),
 
     /** Chủ bài tắt / bật bình luận. */
     toggleComments: (postId: string) =>

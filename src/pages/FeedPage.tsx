@@ -49,7 +49,7 @@ export const FeedPage: React.FC = () => {
     if (filter === 'following') return mine || followingIds.has(p.author.id);
     return true;
   };
-  const visiblePosts = posts.filter((p) => !p.wallOwnerId && allowed(p));
+  const visiblePosts = posts.filter((p) => !p.wallOwnerId && !p.groupId && !p.kind && allowed(p));
   if (sort === 'top') visiblePosts.sort((a, b) => postScore(b) - postScore(a) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (

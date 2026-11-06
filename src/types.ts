@@ -9,7 +9,7 @@ export interface User {
   id: string;
   name: string;
   username: string;
-  email: string;
+  email?: string; // chỉ có với chính mình (server không trả email của người khác)
   avatar: string;
   coverImage?: string;
   bio?: string;
@@ -49,6 +49,14 @@ export interface Post {
   hashtags?: string[]; // chữ thường
   commentsDisabled?: boolean; // chủ bài đã tắt bình luận
   editHistory?: { content: string; editedAt: string }[]; // các phiên bản nội dung TRƯỚC mỗi lần sửa (editedAt = lúc bị thay thế)
+  groupId?: string; // có khi là bài đăng trong nhóm (chỉ xem ở trang nhóm)
+  groupName?: string;
+  groupStatus?: 'approved' | 'pending'; // pending = đang chờ quản trị viên duyệt
+  pageId?: string; // có khi bài được đăng với tư cách một Trang (fanpage)
+  pageName?: string;
+  pageAvatar?: string;
+  kind?: 'reel'; // reel = video ngắn (chỉ hiện ở mục Reels)
+  viewsCount?: number; // số lượt xem của reel
 }
 
 export interface Comment {
@@ -130,7 +138,76 @@ export interface NotificationItem {
   type: 'like' | 'comment' | 'friend_request' | 'friend_accept' | 'system';
   content: string;
   targetId?: string;
-  targetType?: 'post' | 'profile' | 'system';
+  targetType?: 'post' | 'profile' | 'group' | 'page' | 'system';
   isRead: boolean;
   createdAt: string;
+}
+
+// ----- Nhóm giao lưu -----
+export type GroupRole = 'owner' | 'admin' | 'member';
+
+export interface Group {
+  id: string;
+  name: string;
+  description: string;
+  rules: string[];
+  privacy: 'public' | 'private';
+  avatar?: string;
+  cover?: string;
+  ownerId: string;
+  postApproval: boolean; // bài của thành viên thường phải được duyệt
+  joinQuestions: string[]; // câu hỏi khi xin vào nhóm riêng tư
+  membersCount: number;
+  createdAt: string;
+  myRole: GroupRole | null; // vai trò của mình (null nếu chưa là thành viên)
+  myStatus: 'active' | 'pending' | null; // pending = đã xin vào, đang chờ duyệt
+  // Chỉ có khi mình là quản trị viên: số việc đang chờ xử lý
+  pendingMembersCount?: number;
+  pendingPostsCount?: number;
+  openReportsCount?: number;
+}
+
+export interface GroupMember {
+  user: User;
+  role: GroupRole;
+  status: 'active' | 'pending';
+  answers?: { question: string; answer: string }[]; // câu trả lời xin vào nhóm (chỉ quản trị viên thấy)
+  joinedAt: string;
+}
+
+export interface GroupReport {
+  id: string;
+  reporter: User;
+  reason: string;
+  createdAt: string;
+  post: Post;
+}
+
+// ----- Trang (fanpage) -----
+export type PageCategory = 'brand' | 'business' | 'community' | 'public_figure' | 'entertainment' | 'education' | 'nonprofit' | 'other';
+
+export interface Page {
+  id: string;
+  name: string;
+  category: PageCategory;
+  description: string;
+  website?: string;
+  address?: string;
+  avatar?: string;
+  cover?: string;
+  ownerId: string;
+  followersCount: number;
+  createdAt: string;
+  myRole: 'owner' | 'admin' | null; // vai trò của mình (null = người xem thường)
+  isFollowing: boolean;
+  admins?: User[]; // chỉ có khi mình là quản trị viên: chủ trang + các quản trị viên
+}
+
+// ----- Tìm kiếm tổng hợp -----
+export interface SearchResults {
+  query: string;
+  people: { user: User; reasons: string[] }[];
+  groups: { group: Group; reasons: string[] }[];
+  pages: { page: Page; reasons: string[] }[];
+  posts: { post: Post; reasons: string[] }[];
 }

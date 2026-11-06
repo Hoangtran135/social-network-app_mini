@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, Moon, Sun, LucideIcon } from 'lucide-react';
+import { Home, Users, UsersRound, Flag, Clapperboard, MessageCircle, Bell, Plus, LogOut, User as UserIcon, Settings, Sparkles, Bookmark, Clock, Moon, Sun, LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSocial } from '../context/SocialContext';
@@ -140,6 +140,15 @@ export const Navbar: React.FC<{ onOpenCreatePost: () => void }> = ({ onOpenCreat
                   <UserIcon className="w-4 h-4 text-slate-400" /> Trang cá nhân
                 </Link>
                 {/* Trên màn hình lớn hai mục này đã có ở sidebar trái */}
+                <Link to="/groups" className={`${MENU_ITEM} text-slate-700 lg:hidden`}>
+                  <UsersRound className="w-4 h-4 text-slate-400" /> Nhóm
+                </Link>
+                <Link to="/pages" className={`${MENU_ITEM} text-slate-700 lg:hidden`}>
+                  <Flag className="w-4 h-4 text-slate-400" /> Trang
+                </Link>
+                <Link to="/reels" className={`${MENU_ITEM} text-slate-700 lg:hidden`}>
+                  <Clapperboard className="w-4 h-4 text-slate-400" /> Reels
+                </Link>
                 <Link to="/saved" className={`${MENU_ITEM} text-slate-700 lg:hidden`}>
                   <Bookmark className="w-4 h-4 text-slate-400" /> Bài viết đã lưu
                 </Link>

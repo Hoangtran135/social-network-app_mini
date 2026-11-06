@@ -20,6 +20,13 @@ import { BlockedUsersPage } from './pages/BlockedUsersPage';
 import { SavedPostsPage } from './pages/SavedPostsPage';
 import { MemoriesPage } from './pages/MemoriesPage';
 import { HashtagPage } from './pages/HashtagPage';
+import { GroupsPage } from './pages/GroupsPage';
+import { GroupPage } from './pages/GroupPage';
+import { PagesPage } from './pages/PagesPage';
+import { PagePage } from './pages/PagePage';
+import { ReelsPage } from './pages/ReelsPage';
+import { SearchPage } from './pages/SearchPage';
+import { PostPage } from './pages/PostPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { PageLoading } from './components/ui';
 
@@ -63,6 +70,13 @@ export const AppRoutes: React.FC = () => (
       <Route path="/saved" element={<SavedPostsPage />} />
       <Route path="/memories" element={<MemoriesPage />} />
       <Route path="/hashtag/:tag" element={<HashtagPage />} />
+      <Route path="/groups" element={<GroupsPage />} />
+      <Route path="/groups/:id" element={<GroupPage />} />
+      <Route path="/pages" element={<PagesPage />} />
+      <Route path="/pages/:id" element={<PagePage />} />
+      <Route path="/reels" element={<ReelsPage />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/post/:id" element={<PostPage />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/" replace />} />

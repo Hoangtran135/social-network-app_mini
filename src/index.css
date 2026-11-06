@@ -88,6 +88,12 @@
 }
 
 @layer base {
+  /* Luôn chừa chỗ cho thanh cuộn: trang dài / ngắn, mở hộp thoại... không làm cả giao diện dịch ngang vài pixel */
+  html {
+    scrollbar-gutter: stable;
+    /* dải chừa chỗ cho thanh cuộn lấy màu của html → phải cùng màu nền trang (sáng / tối) */
+    background-color: var(--page-bg);
+  }
   body {
     @apply text-slate-900 antialiased selection:bg-blue-500 selection:text-white;
     background-color: var(--page-bg);
@@ -182,6 +188,10 @@
     @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50;
   }
   /* Nút nhỏ (trong thẻ nhỏ, danh sách): cao 32px */
+  /* Nút đổi nhãn theo trạng thái (Thêm bạn bè / Hủy lời mời / Bạn bè...): bề rộng cố định để các nút bên cạnh không bị đẩy */
+  .btn-stable {
+    @apply min-w-36;
+  }
   .btn-sm {
     @apply min-h-8 px-3 text-xs rounded-lg;
   }
