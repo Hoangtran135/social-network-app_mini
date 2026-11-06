@@ -12,7 +12,7 @@ import {
   reactMessageSchema,
   sharePostToChatSchema,
 } from '../validation';
-import { conversationToJson, messageToJson, Doc } from '../formatResponse';
+import { conversationToJson, messageToJson, Doc, getId } from '../formatResponse';
 import { emitToUser } from '../socketServer';
 import { isBlockedBetween } from '../privacyRules';
 
@@ -23,7 +23,7 @@ import { isBlockedBetween } from '../privacyRules';
 export const messagesRouter = Router();
 messagesRouter.use(requireAuth);
 
-const getMemberIds = (conv: Doc): string[] => conv.participants.map(String);
+const getMemberIds = (conv: Doc): string[] => conv.participants.map(getId); // getId: đúng cả khi participants đã populate
 
 /** Gửi tin nhắn realtime tới các thành viên */
 function broadcastMessage(conv: Doc, message: unknown, exceptUserId?: string) {

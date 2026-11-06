@@ -252,3 +252,25 @@ describe('Sửa bình luận realtime', () => {
     expect((await as(app, owner).patch(`/api/comments/${created.body.comment.id}`).send({ content: 'Ba' })).status).toBe(200);
   });
 });
+
+describe('Biệt danh / màu chủ đề realtime', () => {
+  it('đổi biệt danh hoặc màu → người kia nhận conversation:update (và tin hệ thống) ngay, người đổi thì không', async () => {
+    const a = await signUp(app);
+    const b = await signUp(app);
+    const conv = (await as(app, a).post('/api/messages/conversations').send({ participantIds: [b.id] })).body.conversation;
+    const aEvents = await listen(a, ['conversation:update', 'message:new']);
+    const bEvents = await listen(b, ['conversation:update', 'message:new']);
+
+    await as(app, a).patch(`/api/messages/conversations/${conv.id}/nickname`).send({ userId: b.id, nickname: 'Bạn thân' });
+    await as(app, a).patch(`/api/messages/conversations/${conv.id}/theme`).send({ color: '#db2777' });
+    await settle();
+
+    const updates = bEvents['conversation:update'] as { conversation: { nicknames: Record<string, string>; themeColor?: string } }[];
+    expect(updates).toHaveLength(2);
+    expect(updates[0].conversation.nicknames[b.id]).toBe('Bạn thân');
+    expect(updates[1].conversation).toMatchObject({ themeColor: '#db2777', nicknames: { [b.id]: 'Bạn thân' } });
+    expect(bEvents['message:new']).toHaveLength(2); // hai tin hệ thống
+    expect(aEvents['conversation:update']).toHaveLength(0);
+    expect((await as(app, a).patch(`/api/messages/conversations/${conv.id}/theme`).send({ color: '#123456' })).status).toBe(400);
+  });
+});
