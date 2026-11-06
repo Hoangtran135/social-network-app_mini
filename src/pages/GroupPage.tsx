@@ -148,14 +148,14 @@ export const GroupPage: React.FC = () => {
   const adminCount = (group.pendingMembersCount ?? 0) + (group.pendingPostsCount ?? 0) + (group.openReportsCount ?? 0);
 
   const join = (answers: string[] = []) =>
-    act(() => api.post(`/groups/${group.id}/join`, { answers }), group.privacy === 'public' ? `Bạn đã tham gia nhóm ${group.name}!` : 'Đã gửi yêu cầu tham gia, vui lòng chờ quản trị viên duyệt.');
+    act(() => api.post(`/groups/${group.id}/join`, { answers }), 'Đã gửi yêu cầu tham gia, vui lòng chờ quản trị viên duyệt.');
   const leave = async () => {
     const pending = group.myStatus === 'pending';
-    if (!pending && !(await confirm(`Rời nhóm "${group.name}"?`))) return;
+    if (!(await confirm(pending ? `Huỷ yêu cầu tham gia nhóm "${group.name}"?` : `Rời nhóm "${group.name}"? Các bài viết đang chờ duyệt của bạn trong nhóm sẽ bị xoá.`))) return;
     const ok = await act(() => api.delete(`/groups/${group.id}/join`), pending ? 'Đã huỷ yêu cầu tham gia.' : `Bạn đã rời nhóm ${group.name}.`);
     if (ok) setTab('posts');
   };
-  const onJoinClick = () => (group.privacy === 'private' && group.joinQuestions.length > 0 ? setJoining(true) : join());
+  const onJoinClick = () => (group.joinQuestions.length > 0 ? setJoining(true) : join());
 
   return (
     <div className="page-wide">
@@ -181,7 +181,7 @@ export const GroupPage: React.FC = () => {
             )}
             {group.myStatus === null && (
               <button onClick={onJoinClick} disabled={busy} className="btn-primary btn-stable">
-                {group.privacy === 'public' ? 'Tham gia nhóm' : 'Xin tham gia'}
+                Xin tham gia
               </button>
             )}
             {group.myStatus === 'pending' && (

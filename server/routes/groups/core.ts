@@ -74,18 +74,12 @@ export function registerGroupCore(router: Router) {
     res.json({ ok: true });
   });
 
-  /** Tham gia nhóm. Công khai → vào luôn; riêng tư → phải trả lời đủ câu hỏi và chờ quản trị viên duyệt. */
+  /** Xin tham gia nhóm (MỌI nhóm, kể cả công khai, đều phải chờ quản trị viên duyệt; nhóm có câu hỏi thì phải trả lời đủ). */
   router.post('/:id/join', withGroup, validate(joinGroupSchema), async (req, res) => {
     const { group, membership } = res.locals;
     const me = req.userId;
     if (membership) return res.status(409).json({ error: membership.status === 'active' ? 'Bạn đã là thành viên của nhóm này.' : 'Bạn đã gửi yêu cầu tham gia, đang chờ duyệt.' });
     if (await isBlockedBetween(me, getId(group.owner))) return res.status(403).json({ error: 'Không thể tham gia nhóm này.' });
-
-    if (group.privacy === 'public') {
-      const created = await GroupMemberModel.create({ group: group._id, user: me, role: 'member', rank: ROLE_RANK.member, status: 'active' });
-      const fresh = await bumpMembers(group.id, 1);
-      return res.json({ group: groupToJson(fresh, created) });
-    }
 
     const questions: string[] = group.joinQuestions || [];
     const answers: string[] = req.body.answers;

@@ -81,7 +81,7 @@ Công nghệ: React 19 + TypeScript + Tailwind 4 (giao diện), Express + MongoD
 
 ## 10b. Nhóm giao lưu (Groups)
 - **Tạo nhóm** công khai hoặc riêng tư, mô tả, nội quy, câu hỏi khi xin vào (tối đa 3), bật / tắt duyệt bài; ảnh nhóm + ảnh bìa; trang `/groups` (Nhóm của tôi / Khám phá, tìm theo tên).
-- **Tham gia / rời nhóm**: công khai vào luôn; riêng tư phải trả lời câu hỏi và chờ duyệt (huỷ yêu cầu được). Chủ nhóm không rời được (phải chuyển quyền hoặc xoá nhóm).
+- **Tham gia / rời nhóm**: mọi nhóm (kể cả công khai) đều phải **chờ quản trị viên duyệt**; nhóm riêng tư có câu hỏi phải trả lời đủ. Huỷ yêu cầu và rời nhóm đều hiện ô xác nhận. Chủ nhóm không rời được (phải chuyển quyền hoặc xoá nhóm).
 - **Vai trò**: chủ nhóm > quản trị viên > thành viên. Chủ nhóm bổ nhiệm / gỡ quản trị viên, chuyển quyền, đổi quyền riêng tư, xoá nhóm; quản trị viên duyệt / từ chối yêu cầu, duyệt bài, xử lý báo cáo, đuổi thành viên thường, sửa nhóm.
 - **Bài viết trong nhóm** (chỉ xem ở trang nhóm, không lên bảng tin / hồ sơ / hashtag / chia sẻ / lưu): thành viên đăng; nhóm bật duyệt thì bài của thành viên thường chờ quản trị viên duyệt (tác giả vẫn thấy bài của mình); quản trị viên xoá bài và bình luận; thành viên **báo cáo** bài cho quản trị viên.
 - Nhóm riêng tư: người ngoài chỉ thấy thông tin cơ bản, không xem được bài và danh sách thành viên. Realtime và thông báo chỉ gửi cho thành viên nhóm / quản trị viên.
